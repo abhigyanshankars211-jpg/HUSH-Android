@@ -16,50 +16,70 @@ jobs:
         uses: actions/setup-java@v4
         with:
           distribution: temurin
-          java-version: '17'
+          java-version: '21'
 
       - name: Setup Node
         uses: actions/setup-node@v4
         with:
-          node-version: '20'
+          node-version: '22'
 
-      - name: Configure Android SDK
-        run: |
-          echo "ANDROID_HOME=/usr/local/lib/android/sdk" >> $GITHUB_ENV
-          echo "/usr/local/lib/android/sdk/platform-tools" >> $GITHUB_PATH
-          echo "/usr/local/lib/android/sdk/cmdline-tools/16.0/bin" >> $GITHUB_PATH
-
-      - name: Install Android SDK packages
-        run: |
-          SDKMANAGER=$(find /usr/local/lib/android/sdk/cmdline-tools -name sdkmanager -type f | head -n 1)
-          yes | "$SDKMANAGER" --licenses || true
-          "$SDKMANAGER" "platform-tools" "platforms;android-35" "build-tools;35.0.0"
+      - name: Setup Android SDK
+        uses: android-actions/setup-android@v4
+        with:
+          packages: 'platform-tools platforms;android-35 platforms;android-36 build-tools;35.0.0 build-tools;36.0.0'
 
       - name: Extract HUSH source
         run: |
+          set -euo pipefail
+          rm -rf app
           mkdir app
-          unzip HUSH_Android_Capacitor_Source.zip -d app
+          unzip -q HUSH_Android_Capacitor_Source.zip -d app
+          if [ -f app/package.json ]; then
+            echo "APP_DIR=app" >> "$GITHUB_ENV"
+          else
+            pkg=$(find app -mindepth 2 -maxdepth 3 -name package.json -type f | head -n 1)
+            if [ -z "$pkg" ]; then
+              echo "package.json zip ke andar nahi mila" >&2
+              find app -maxdepth 3 -type d
+              exit 1
+            fi
+            echo "APP_DIR=$(dirname "$pkg")" >> "$GITHUB_ENV"
+          fi
 
       - name: Install dependencies
-        working-directory: app
+        working-directory: ${{ env.APP_DIR }}
         run: npm install
 
-      - name: Create Android project
-        working-directory: app
-        run: npx cap add android
+      - name: Build web assets
+        working-directory: ${{ env.APP_DIR }}
+        run: |
+          if node -e "const p=require('./package.json'); process.exit(p.scripts && p.scripts.build ? 0 : 1)"; then
+            npm run build
+          else
+            echo "No build script, skipping"
+          fi
+
+      - name: Add Android platform
+        working-directory: ${{ env.APP_DIR }}
+        run: |
+          if [ ! -d android ]; then
+            npx cap add android
+          fi
 
       - name: Sync Android project
-        working-directory: app
+        working-directory: ${{ env.APP_DIR }}
         run: npx cap sync android
 
       - name: Build APK
-        working-directory: app/android
+        working-directory: ${{ env.APP_DIR }}/android
         run: |
+          echo "sdk.dir=$ANDROID_HOME" > local.properties
           chmod +x gradlew
-          ./gradlew assembleDebug
+          ./gradlew assembleDebug --no-daemon --stacktrace
 
       - name: Upload APK
         uses: actions/upload-artifact@v4
         with:
           name: HUSH-debug-APK
-          path: app/android/app/build/outputs/apk/debug/app-debug.apk
+          path: ${{ env.APP_DIR }}/android/app/build/outputs/apk/debug/*.apk
+          if-no-files-found: error
