@@ -63,6 +63,7 @@
 <nav>
 <button class="nav active" data-page="wall"><span>▦</span> Pic Wall</button>
 <button class="nav" data-page="chats"><span>◌</span> Chats</button>
+<button class="nav" data-page="room"><span>☰</span> Room</button>
 <button class="nav" data-page="groups"><span>♧</span> Groups</button>
 <button class="nav" data-page="games"><span>✕</span> Tic-tac</button>
 <button class="nav" data-page="profile"><span>◎</span> Profile & safety</button>
@@ -76,6 +77,11 @@
 <section id="chatsPage" class="page hidden"><div class="banner chatBanner"><div><small>PRIVATE CONVERSATIONS</small><h1>Your people,<br>your space.</h1><p>One-to-one conversations, without revealing your identity.</p></div><div class="symbol">✉</div></div>
 <div class="sectionhead"><div><h3>Your conversations</h3><p>Start a chat with a username. Do not share a phone number.</p></div><button id="newChat" class="btn primary">＋ New chat</button></div>
 <div class="chatLayout"><div id="chatList" class="chatList"><div class="empty">No chats yet.</div></div><div id="chatPanel" class="chatPanel"><div class="empty">Choose a conversation.</div></div></div></section>
+<section id="roomPage" class="page hidden"><div class="banner chatBanner"><div><small>EVERYONE</small><h1>The room.</h1><p>One chat for every member. Not private, and not a group.</p></div><div class="symbol">☰</div></div>
+<div class="sectionhead"><div><h3>Public room</h3><p>Anyone in HUSH can read and write here.</p></div></div>
+<div id="roomLog" class="messages roomLog"><div class="empty">Loading the room…</div></div>
+<form id="roomForm" class="sendForm mediaSend"><label class="attachBtn" title="Attach photo">＋<input id="roomPhoto" type="file" accept="image/jpeg,image/png,image/webp" hidden></label><input id="roomText" maxlength="2000" placeholder="Write to everyone…"><button class="btn primary" type="submit">Send</button></form>
+<small class="chatHint">This is public to members. Max 2 MB. When 5-minute delete is on, room messages disappear too.</small></section>
 <section id="groupsPage" class="page hidden"><div class="banner groupBanner"><div><small>FIND YOUR COMMUNITY</small><h1>Better together.</h1><p>Create a space around an interest.</p></div><div class="symbol">✺</div></div>
 <div class="sectionhead"><div><h3>Explore groups</h3><p>Join a public group or create your own.</p></div><button id="createGroup" class="btn primary">＋ Create group</button></div><div id="groups" class="groupGrid"><div class="empty">Loading groups…</div></div></section>
 <section id="gamesPage" class="page hidden"><div class="banner groupBanner"><div><small>TWO PLAYERS</small><h1>Tic-tac-toe.</h1><p>Share a code. No money, just the game.</p></div><div class="symbol">✕</div></div>

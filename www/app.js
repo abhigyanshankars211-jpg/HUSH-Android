@@ -1,4 +1,4 @@
-let sb, me=null, username='', activeDM=null, activeGroup=null, dmChannel=null, groupChannel=null, profileCreatedAt=null, extraWords=[], isAdminUser=false, wallCache={}, riskMap={};
+let sb, me=null, username='', activeDM=null, activeGroup=null, dmChannel=null, groupChannel=null, roomChannel=null, profileCreatedAt=null, extraWords=[], isAdminUser=false, wallCache={}, riskMap={};
 const BUILTIN_WORDS=['fuck','shit','bitch','madarchod','bhosdike','bhosdi','chutiya','chutiye','randi','gaandu','harami','bhenchod','behenchod'];
 const PHONE_RE=/(?:\+91[\s-]?)?[6-9]\d{9}\b|\b\d{5}[\s-]?\d{5}\b/;
 const EMAIL_RE=/[A-Z0-9._%+-]+@[A-Z0-9.-]+\.[A-Z]{2,}/i;
@@ -129,7 +129,7 @@ function showError(t){$('loginError').textContent=t}
 function modal(html){$('modalBody').innerHTML=html;$('modal').classList.remove('hidden')}
 function closeModal(){$('modal').classList.add('hidden');const box=document.querySelector('.modalBox');if(box)box.classList.remove('wide')}
 $('closeModal').onclick=closeModal;$('modal').onclick=e=>{if(e.target===$('modal'))closeModal()};
-function page(p){document.querySelectorAll('.nav').forEach(b=>b.classList.toggle('active',b.dataset.page===p));['wall','chats','groups','games','profile','admin'].forEach(x=>$(x+'Page').classList.toggle('hidden',x!==p));$('sectionTitle').textContent={wall:'Pic Wall',chats:'Chats',groups:'Groups',games:'Tic-tac',profile:'Profile & safety',admin:'Admin panel'}[p];$('sectionKicker').textContent={wall:'COMMUNITY SPACE',chats:'PRIVATE MESSAGES',groups:'YOUR COMMUNITIES',games:'TWO PLAYERS',profile:'ACCOUNT & PRIVACY',admin:'MODERATION & SAFETY'}[p];if(p==='wall')loadPosts();if(p==='chats')loadDMs();if(p==='groups')loadGroups();if(p==='games'){renderTic();loadTicMembers()}if(p==='profile')loadBlocks();if(p==='admin')loadAdmin('pending')}
+function page(p){document.querySelectorAll('.nav').forEach(b=>b.classList.toggle('active',b.dataset.page===p));['wall','chats','room','groups','games','profile','admin'].forEach(x=>$(x+'Page').classList.toggle('hidden',x!==p));$('sectionTitle').textContent={wall:'Pic Wall',chats:'Chats',room:'Room',groups:'Groups',games:'Tic-tac',profile:'Profile & safety',admin:'Admin panel'}[p];$('sectionKicker').textContent={wall:'COMMUNITY SPACE',chats:'PRIVATE MESSAGES',room:'EVERYONE',groups:'YOUR COMMUNITIES',games:'TWO PLAYERS',profile:'ACCOUNT & PRIVACY',admin:'MODERATION & SAFETY'}[p];if(p==='wall')loadPosts();if(p==='chats')loadDMs();if(p==='room')loadRoom();if(p==='groups')loadGroups();if(p==='games'){renderTic();loadTicMembers()}if(p==='profile')loadBlocks();if(p==='admin')loadAdmin('pending')}
 document.querySelectorAll('.nav').forEach(b=>b.onclick=()=>page(b.dataset.page));
 async function init(){
  if(!ageOk()){$('ageGate').classList.remove('hidden');$('login').classList.add('hidden');return}
@@ -540,6 +540,65 @@ window.playTic=async cell=>{
   ticGame=ticRow(data)||ticGame;
   renderTic();
  }catch(e){notify(e.message||'Move was not saved.')}
+};
+
+async function loadRoom(){
+ const box=$('roomLog');
+ if(!box) return;
+ try{
+  await purgeVanish();
+  const {data,error}=await sb.from('room_messages').select('*').order('created_at',{ascending:false}).limit(80);
+  if(error) throw error;
+  let rows=(data||[]).reverse();
+  if(vanishOn){const cut=Date.now()-5*60*1000;rows=rows.filter(m=>new Date(m.created_at).getTime()>cut)}
+  const names=await profiles(rows.map(m=>m.sender_id));
+  await loadRisk(rows.map(m=>m.sender_id));
+  const items=await Promise.all(rows.map(async m=>{
+   const html=await messageMarkup(m);
+   return `<div class="groupMsgHead">${riskDot(m.sender_id)}@${esc(names[m.sender_id]||'member')} <button class="linkbtn" onclick="reportItem('user','${m.sender_id}','${m.sender_id}')">Report</button></div>${html}`;
+  }));
+  box.innerHTML=items.join('')||'<div class="empty">No messages yet. Say hello.</div>';
+  box.scrollTop=box.scrollHeight;
+  if(!roomChannel){
+   roomChannel=sb.channel('public-room').on('postgres_changes',{event:'INSERT',schema:'public',table:'room_messages'},async payload=>{
+    if(payload.new.sender_id===me.id) return;
+    const who=await profiles([payload.new.sender_id]);
+    await loadRisk([payload.new.sender_id]);
+    const html=await messageMarkup(payload.new);
+    const log=$('roomLog');
+    if(!log) return;
+    if(log.querySelector('.empty')) log.innerHTML='';
+    log.insertAdjacentHTML('beforeend',`<div class="groupMsgHead">${riskDot(payload.new.sender_id)}@${esc(who[payload.new.sender_id]||'member')} <button class="linkbtn" onclick="reportItem('user','${payload.new.sender_id}','${payload.new.sender_id}')">Report</button></div>${html}`);
+    log.scrollTop=log.scrollHeight;
+   }).subscribe();
+  }
+ }catch(e){box.innerHTML='<div class="empty">Room is not ready. Run the room SQL once.</div>'}
+}
+$('roomForm').onsubmit=async e=>{
+ e.preventDefault();
+ const input=$('roomText'), file=$('roomPhoto')?.files?.[0], body=input.value.trim();
+ if(!body&&!file) return;
+ if(body){const bad=safetyBlock(body); if(bad){notify(bad);return}}
+ if(file){const badFile=imageFileError(file); if(badFile){notify(badFile);return}}
+ try{
+  await assertCanPost();
+  let image_path=null;
+  if(file){
+   const ext=file.type==='image/png'?'png':file.type==='image/webp'?'webp':'jpg';
+   image_path=`room/${me.id}/${crypto.randomUUID()}.${ext}`;
+   const up=await sb.storage.from('chat-media').upload(image_path,file,{contentType:file.type,upsert:false});
+   if(up.error) throw up.error;
+  }
+  const {data,error}=await sb.from('room_messages').insert({sender_id:me.id,body:body||null,image_path}).select().single();
+  if(error) throw error;
+  input.value='';
+  if(file) $('roomPhoto').value='';
+  const box=$('roomLog');
+  if(box.querySelector('.empty')) box.innerHTML='';
+  const html=await messageMarkup(data);
+  box.insertAdjacentHTML('beforeend',`<div class="groupMsgHead">${riskDot(me.id)}@${esc(username)} </div>${html}`);
+  box.scrollTop=box.scrollHeight;
+ }catch(err){notify(err.message||'Could not send. Run the room SQL once.')}
 };
 
 init();
