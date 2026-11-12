@@ -11,10 +11,10 @@
 <body>
 <div id="ageGate" class="login-wrap"><div class="login-card">
 <div class="logo">h</div><span class="tag">18+ ONLY</span><h1>Adults only.</h1>
-<p>HUSH photos aur private chats ke liye hai. Yeh space 18 saal se kam logon ke liye nahi hai.</p>
+<p>HUSH is for photos and private chats. This space is only for people who are 18 or older.</p>
 <button id="ageYes" class="btn primary" type="button">I am 18 or older</button>
 <button id="ageNo" class="btn secondary" type="button">I am under 18</button>
-<small id="ageNoMsg" class="error hidden">Aap HUSH use nahi kar sakte.</small>
+<small id="ageNoMsg" class="error hidden">You cannot use HUSH.</small>
 </div></div>
 <div id="login" class="login-wrap hidden"><div class="login-card" id="loginCard">
 <div class="logo">h</div><span class="tag">ANONYMOUS SOCIAL</span><h1>Find your people.<br><i>Keep your privacy.</i></h1>
@@ -25,17 +25,17 @@
 <div id="loginError" class="error"></div>
 <hr style="border:0;border-top:1px solid var(--line);margin:24px 0">
 <h3 style="margin:0 0 8px">Admin login</h3>
-<p style="margin:0 0 14px;font-size:12px">Admin ke liye permanent email/password account. Email public profile par nahi dikhega.</p>
+<p style="margin:0 0 14px;font-size:12px">Permanent email and password for admins. The email is not shown on the public profile.</p>
 <input id="adminEmail" type="email" placeholder="Admin email" autocomplete="email">
 <input id="adminPassword" type="password" placeholder="Password (minimum 8 characters)" autocomplete="current-password" style="margin-top:9px">
 <button id="adminLoginBtn" class="btn secondary" type="button">Admin sign in</button>
 <button id="adminCreateBtn" class="btn secondary" type="button">Create permanent admin account</button>
-<small>Account create karne ke baad Supabase Authentication → Users se UID copy karke admin_users mein activate karein. Email verification enabled ho to inbox verify karein.</small>
+<small>After creating the account, copy the UID from Supabase Authentication → Users and add it to admin_users. Verify the inbox if email confirmation is on.</small>
 </div>
 <div class="login-card hidden" id="appealBox">
 <div class="logo">h</div><span class="tag">ACCOUNT RESTRICTED</span><h1>Appeal once.</h1>
-<p>Aapka account band hai. Ek baar reason likh sakte ho. Admin accept ya reject karega.</p>
-<textarea id="appealText" maxlength="500" placeholder="Kya hua, seedhe shabdon mein likho"></textarea>
+<p>Your account is restricted. You can write one reason. An admin will accept or reject it.</p>
+<textarea id="appealText" maxlength="500" placeholder="Explain what happened"></textarea>
 <button id="appealBtn" class="btn primary" type="button">Send appeal</button>
 <p id="appealStatus" class="error"></p>
 <button id="appealSignOut" class="btn secondary" type="button">Sign out</button>
@@ -54,18 +54,18 @@
 <button id="signOut" class="signout">↪ Sign out</button></aside>
 <main class="main"><header class="topbar"><div><small id="sectionKicker">COMMUNITY SPACE</small><h2 id="sectionTitle">Pic Wall</h2></div><div class="status"><i></i> Connected</div></header>
 <section id="wallPage" class="page"><div class="banner wallBanner"><div><small>SHARE A MOMENT</small><h1>A wall without<br>the labels.</h1><p>Post a picture. Start a conversation. Stay anonymous.</p></div><div class="symbol">✳</div></div>
-<div class="sectionhead"><div><h3>Community wall</h3><p>Photo pe tap karo, poori dikhegi. 1 ghante baad khud hat jaati hai.</p></div><div class="inline"><button id="refreshWall" class="btn secondary" type="button">Refresh</button><button id="postBtn" class="btn primary">＋ Photo bhejo</button></div></div><div id="posts" class="cards"><div class="empty">Loading the wall…</div></div></section>
+<div class="sectionhead"><div><h3>Community wall</h3><p>Tap a photo to open it. Every photo is removed after 1 hour.</p></div><div class="inline"><button id="refreshWall" class="btn secondary" type="button">Refresh</button><button id="postBtn" class="btn primary">＋ Share a picture</button></div></div><div id="posts" class="cards"><div class="empty">Loading the wall…</div></div></section>
 <section id="chatsPage" class="page hidden"><div class="banner chatBanner"><div><small>PRIVATE CONVERSATIONS</small><h1>Your people,<br>your space.</h1><p>One-to-one conversations, without revealing your identity.</p></div><div class="symbol">✉</div></div>
-<div class="sectionhead"><div><h3>Your conversations</h3><p>Username se baat shuru karo. Phone number mat likho.</p></div><button id="newChat" class="btn primary">＋ Nayi baat</button></div>
-<div class="chatLayout"><div id="chatList" class="chatList"><div class="empty">Abhi koi baat nahi.</div></div><div id="chatPanel" class="chatPanel"><div class="empty">Baat choose karo.</div></div></div></section>
+<div class="sectionhead"><div><h3>Your conversations</h3><p>Start a chat with a username. Do not share a phone number.</p></div><button id="newChat" class="btn primary">＋ New chat</button></div>
+<div class="chatLayout"><div id="chatList" class="chatList"><div class="empty">No chats yet.</div></div><div id="chatPanel" class="chatPanel"><div class="empty">Choose a conversation.</div></div></div></section>
 <section id="groupsPage" class="page hidden"><div class="banner groupBanner"><div><small>FIND YOUR COMMUNITY</small><h1>Better together.</h1><p>Create a space around an interest.</p></div><div class="symbol">✺</div></div>
-<div class="sectionhead"><div><h3>Explore groups</h3><p>Group join karo, ya apna banao.</p></div><button id="createGroup" class="btn primary">＋ Group banao</button></div><div id="groups" class="groupGrid"><div class="empty">Loading groups…</div></div></section>
+<div class="sectionhead"><div><h3>Explore groups</h3><p>Join a public group or create your own.</p></div><button id="createGroup" class="btn primary">＋ Create group</button></div><div id="groups" class="groupGrid"><div class="empty">Loading groups…</div></div></section>
 <section id="profilePage" class="page hidden"><div class="banner profileBanner"><div><small>YOUR SPACE</small><h1>Your identity.<br>Your choices.</h1><p>Manage your anonymous profile and privacy.</p></div><div class="symbol">◎</div></div>
 <div class="profileBox"><div class="avatar big" id="profileAvatar">?</div><h3 id="profileUsername">Member</h3><p>Anonymous HUSH member</p><p class="account-id">Account ID: <code id="profileId">Loading…</code></p><button class="btn secondary" id="copyIdBtn" type="button">Copy account ID (for admin setup)</button></div>
 <div class="sectionhead"><div><h3>Block a member</h3><p>Blocked members cannot start conversations with you in HUSH.</p></div></div>
 <div class="safetyBox"><div class="inline"><input id="blockUsername" placeholder="Username to block"><button id="blockBtn" class="btn secondary">Block</button></div><div id="blockedList" class="blockedList">Loading…</div></div>
-<div class="safetyBox"><h3>Privacy & moderation</h3><p>New Pic Wall posts are pending until an administrator approves them. Har photo 1 ghante baad apne aap delete ho jaati hai. Members photo ko delete ke liye mark kar sakte hain. Delete sirf admin karega. Phone number, email aur links block ho jaate hain. Naye account pe pehle 24 ghante mein sirf 1 photo. Screenshot ho sakta hai — personal info mat likho.</p></div>
-<div class="safetyBox"><h3>Delete account</h3><p>Account, aapke posts aur aapke messages delete ho jayenge. Wapas nahi aayega.</p><button class="btn danger" id="deleteAccountBtn" type="button">Delete my account</button></div>
+<div class="safetyBox"><h3>Privacy & moderation</h3><p>New Pic Wall posts stay hidden until an administrator approves them. Every photo is removed after 1 hour. Members can mark a photo for deletion. Only an admin can delete it. Phone numbers, emails, and links are blocked. A new account can post only 1 photo in the first 24 hours. Screenshots are possible, so do not share personal details.</p></div>
+<div class="safetyBox"><h3>Delete account</h3><p>Your account, posts, and messages will be deleted. This cannot be undone.</p><button class="btn danger" id="deleteAccountBtn" type="button">Delete my account</button></div>
 </section>
 <section id="adminPage" class="page hidden"><div class="banner adminBanner"><div><small>HUSH CONTROL ROOM</small><h1>Keep the space safe.</h1><p>Review community photos and reports. Only designated admins can access this panel.</p></div><div class="symbol">⚙</div></div>
 <div class="adminTabs"><button class="adminTab active" data-admin-tab="pending">Pending photos</button><button class="adminTab" data-admin-tab="photos">Photos</button><button class="adminTab" data-admin-tab="reports">Reports</button><button class="adminTab" data-admin-tab="members">Members</button><button class="adminTab" data-admin-tab="safety">Safety</button></div>
