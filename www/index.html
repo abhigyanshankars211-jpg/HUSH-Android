@@ -1,7 +1,7 @@
 <!doctype html>
 <html lang="en">
 <head>
-<meta charset="utf-8"><meta name="theme-color" content="#17182b"><meta name="apple-mobile-web-app-capable" content="yes"><meta name="apple-mobile-web-app-status-bar-style" content="black-translucent"><link rel="manifest" href="manifest.webmanifest"><meta name="viewport" content="width=device-width,initial-scale=1">
+<meta charset="utf-8"><meta name="theme-color" content="#10131a"><meta name="apple-mobile-web-app-capable" content="yes"><meta name="apple-mobile-web-app-status-bar-style" content="black-translucent"><link rel="manifest" href="manifest.webmanifest"><meta name="viewport" content="width=device-width,initial-scale=1">
 <script>if(window.Capacitor)document.documentElement.classList.add('native')</script>
 <title>HUSH — Anonymous Social</title>
 <link rel="stylesheet" href="style.css">
@@ -20,6 +20,15 @@
 <div id="login" class="login-wrap hidden"><div class="login-card" id="loginCard">
 <div class="logo">h</div><span class="tag">ANONYMOUS SOCIAL</span><h1>Find your people.<br><i>Keep your privacy.</i></h1>
 <p>Join HUSH with an anonymous account. No public phone number or email profile.</p>
+<ul class="rules">
+<li>No abuse.</li>
+<li>Avoid porn.</li>
+<li>No spam.</li>
+<li>A ban blocks this device, not only the account.</li>
+<li>No phone numbers, addresses, emails, or links.</li>
+<li>Wall photos are removed after 1 hour.</li>
+<li>Three member reports pause posting. Only an admin can ban.</li>
+</ul>
 <label>Choose a username</label><input id="username" maxlength="20" placeholder="e.g. MoonWalker27" autocomplete="off">
 <button id="loginBtn" class="btn primary">Enter HUSH <span>→</span></button>
 <small>Use 3–20 letters, numbers or underscores. Avoid personal information.</small>
@@ -67,7 +76,7 @@
 <form id="joinTic" class="inline"><input id="ticCode" maxlength="5" placeholder="Game code" autocomplete="off"><button class="btn secondary" type="submit">Join</button></form>
 <p id="ticCodeShow" class="ticCode"></p>
 <p id="ticStatus" class="hint">Start a game or join with a code.</p>
-<div id="ticBoard" class="ticBoard"></div></section>
+<div class="gameLayout"><div id="ticBoard" class="ticBoard"></div><aside class="memberRail"><h3>In the app now</h3><div id="ticMembers"><div class="empty">Open this page to see members.</div></div></aside></div></section>
 <section id="profilePage" class="page hidden"><div class="banner profileBanner"><div><small>YOUR SPACE</small><h1>Your identity.<br>Your choices.</h1><p>Manage your anonymous profile and privacy.</p></div><div class="symbol">◎</div></div>
 <div class="profileBox"><div class="avatar big" id="profileAvatar">?</div><h3 id="profileUsername">Member</h3><p>Anonymous HUSH member</p><p class="account-id">Account ID: <code id="profileId">Loading…</code></p><button class="btn secondary" id="copyIdBtn" type="button">Copy account ID (for admin setup)</button></div>
 <div class="sectionhead"><div><h3>Block a member</h3><p>Blocked members cannot start conversations with you in HUSH.</p></div></div>

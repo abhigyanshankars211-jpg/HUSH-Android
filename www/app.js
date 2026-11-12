@@ -16,6 +16,43 @@ function safetyBlock(text){
  }
  return '';
 }
+function deviceId(){
+ try{
+  let id=localStorage.getItem('hush_device');
+  if(!id||id.length<8){id=crypto.randomUUID();localStorage.setItem('hush_device',id)}
+  return id;
+ }catch(e){return ''}
+}
+function imageFileError(file){
+ if(!file) return '';
+ if(!['image/jpeg','image/png','image/webp'].includes(file.type)) return 'Choose a JPG, PNG or WebP image.';
+ if(file.size>2*1024*1024) return 'Image must be under 2 MB.';
+ return '';
+}
+let vanishOn=false, presenceStarted=false;
+async function deviceBlocked(){
+ const id=deviceId();
+ if(!id) return false;
+ try{const {data,error}=await sb.rpc('device_blocked',{device_id:id}); if(error) return false; return data===true;}catch(e){return false}
+}
+async function startPresence(){
+ if(presenceStarted) return;
+ presenceStarted=true;
+ const beat=async()=>{
+  try{
+   const id=deviceId(); if(!id||!me) return;
+   const r=await sb.rpc('register_device',{device_id:id});
+   if(r.data===true){try{await sb.auth.signOut()}catch(e){} location.reload()}
+  }catch(e){}
+ };
+ beat();
+ setInterval(beat,60000);
+}
+async function purgeVanish(){
+ try{const s=await sb.rpc('vanish_enabled'); if(!s.error) vanishOn=s.data===true;}catch(e){}
+ if(!vanishOn) return;
+ try{await sb.rpc('purge_vanished')}catch(e){}
+}
 async function signupsEnabled(){
  try{const {data,error}=await sb.rpc('signups_enabled'); if(error) return true; return data!==false;}catch(e){return true}
 }
@@ -71,13 +108,14 @@ function showError(t){$('loginError').textContent=t}
 function modal(html){$('modalBody').innerHTML=html;$('modal').classList.remove('hidden')}
 function closeModal(){$('modal').classList.add('hidden');const box=document.querySelector('.modalBox');if(box)box.classList.remove('wide')}
 $('closeModal').onclick=closeModal;$('modal').onclick=e=>{if(e.target===$('modal'))closeModal()};
-function page(p){document.querySelectorAll('.nav').forEach(b=>b.classList.toggle('active',b.dataset.page===p));['wall','chats','groups','games','profile','admin'].forEach(x=>$(x+'Page').classList.toggle('hidden',x!==p));$('sectionTitle').textContent={wall:'Pic Wall',chats:'Chats',groups:'Groups',games:'Tic-tac',profile:'Profile & safety',admin:'Admin panel'}[p];$('sectionKicker').textContent={wall:'COMMUNITY SPACE',chats:'PRIVATE MESSAGES',groups:'YOUR COMMUNITIES',games:'TWO PLAYERS',profile:'ACCOUNT & PRIVACY',admin:'MODERATION & SAFETY'}[p];if(p==='wall')loadPosts();if(p==='chats')loadDMs();if(p==='groups')loadGroups();if(p==='games')renderTic();if(p==='profile')loadBlocks();if(p==='admin')loadAdmin('pending')}
+function page(p){document.querySelectorAll('.nav').forEach(b=>b.classList.toggle('active',b.dataset.page===p));['wall','chats','groups','games','profile','admin'].forEach(x=>$(x+'Page').classList.toggle('hidden',x!==p));$('sectionTitle').textContent={wall:'Pic Wall',chats:'Chats',groups:'Groups',games:'Tic-tac',profile:'Profile & safety',admin:'Admin panel'}[p];$('sectionKicker').textContent={wall:'COMMUNITY SPACE',chats:'PRIVATE MESSAGES',groups:'YOUR COMMUNITIES',games:'TWO PLAYERS',profile:'ACCOUNT & PRIVACY',admin:'MODERATION & SAFETY'}[p];if(p==='wall')loadPosts();if(p==='chats')loadDMs();if(p==='groups')loadGroups();if(p==='games'){renderTic();loadTicMembers()}if(p==='profile')loadBlocks();if(p==='admin')loadAdmin('pending')}
 document.querySelectorAll('.nav').forEach(b=>b.onclick=()=>page(b.dataset.page));
 async function init(){
  if(!ageOk()){$('ageGate').classList.remove('hidden');$('login').classList.add('hidden');return}
  $('ageGate').classList.add('hidden');
  if(!window.HUSH_CONFIG||!window.HUSH_CONFIG.SUPABASE_URL||window.HUSH_CONFIG.SUPABASE_URL.includes('YOUR_')){$('login').classList.remove('hidden');showError('Supabase config missing. Check config.js.');return}
  sb=window.supabase.createClient(window.HUSH_CONFIG.SUPABASE_URL,window.HUSH_CONFIG.SUPABASE_PUBLISHABLE_KEY);
+ if(await deviceBlocked()){$('login').classList.remove('hidden');showError('This device is banned. You cannot sign in again.');return}
  const {data:{session},error}=await sb.auth.getSession();if(error)console.error(error);
  if(session){
   me=session.user;
@@ -97,7 +135,7 @@ $('appealBtn').onclick=async()=>{
  const bad=safetyBlock(msg); if(bad){$('appealStatus').textContent=bad;return}
  try{
   const {data,error}=await sb.rpc('submit_ban_appeal',{msg}); if(error) throw error;
-  $('appealStatus').textContent='Appeal bhej diya. Admin dekhega.';
+  $('appealStatus').textContent='Appeal sent. An admin will review it.';
   $('appealBtn').disabled=true; $('appealText').disabled=true;
  }catch(e){$('appealStatus').textContent=e.message||'Could not send the appeal. The safety SQL may still need to be run once.'}
 };
@@ -123,6 +161,7 @@ async function adminLogin(){
  const desiredUsername=$('username').value.trim().replace(/\s+/g,'_');
  if(!email||password.length<8){showError('Enter an admin email and a password of at least 8 characters.');return}
  try{
+  if(await deviceBlocked()) throw new Error('This device is banned. You cannot sign in again.');
   const {data,error}=await sb.auth.signInWithPassword({email,password});if(error)throw error;
   me=data.user;
   const {data:p,error:pe}=await sb.from('profiles').select('username').eq('id',me.id).maybeSingle();if(pe)throw pe;
@@ -160,6 +199,7 @@ async function login(){
  const bad=safetyBlock(u); if(bad){showError(bad+' Choose a different username.');return}
  $('loginBtn').disabled=true;showError('');
  try{
+  if(await deviceBlocked()) throw new Error('This device is banned. You cannot sign in again.');
   let {data:{session},error}=await sb.auth.getSession();if(error)throw error;
   if(!session){
    const open=await signupsEnabled();
@@ -179,13 +219,14 @@ async function login(){
  }catch(e){showError(e.message||'Could not sign in. Check Anonymous Sign-ins and try again.')}
  finally{$('loginBtn').disabled=false}
 }
-async function enterApp(){$('login').classList.add('hidden');$('app').classList.remove('hidden');$('myUsername').textContent=username;$('avatar').textContent=initials(username);$('profileUsername').textContent=username;$('profileAvatar').textContent=initials(username);$('profileId').textContent=me.id;if(!profileCreatedAt){const {data:p}=await sb.from('profiles').select('created_at').eq('id',me.id).maybeSingle();profileCreatedAt=p?.created_at||null}await loadSafetyWords();const a=await sb.rpc('is_hush_admin');isAdminUser=a.data===true;if(isAdminUser)$('adminNav').classList.remove('hidden');try{await sb.rpc('sweep_expired_posts')}catch(e){}try{const lock=await sb.rpc('posting_locked');if(!lock.error&&lock.data===true)notify('Posting is paused after 3 member reports. An admin must review your account.')}catch(e){}page('wall');maybeGuide()}
+async function enterApp(){$('login').classList.add('hidden');$('app').classList.remove('hidden');$('myUsername').textContent=username;$('avatar').textContent=initials(username);$('profileUsername').textContent=username;$('profileAvatar').textContent=initials(username);$('profileId').textContent=me.id;if(!profileCreatedAt){const {data:p}=await sb.from('profiles').select('created_at').eq('id',me.id).maybeSingle();profileCreatedAt=p?.created_at||null}await loadSafetyWords();await startPresence();await purgeVanish();const a=await sb.rpc('is_hush_admin');isAdminUser=a.data===true;if(isAdminUser)$('adminNav').classList.remove('hidden');try{await sb.rpc('sweep_expired_posts')}catch(e){}try{const lock=await sb.rpc('posting_locked');if(!lock.error&&lock.data===true)notify('Posting is paused after 3 member reports. An admin must review your account.')}catch(e){}page('wall');maybeGuide()}
 $('signOut').onclick=async()=>{if(!confirm('Sign out? This anonymous account may not be recoverable in this browser.'))return;await sb.auth.signOut();location.reload()};
 async function profiles(ids){if(!ids.length)return{};const {data,error}=await sb.from('profiles').select('id,username').in('id',[...new Set(ids)]);if(error)throw error;return Object.fromEntries((data||[]).map(x=>[x.id,x.username]))}
 async function loadPosts(){
  const el=$('posts');el.innerHTML='<div class="empty">Loading posts…</div>';
  try{
   try{await sb.rpc('sweep_expired_posts')}catch(e){}
+  await purgeVanish();
   const {data:rawPosts,error}=await sb.from('posts').select('*').eq('approved',true).order('created_at',{ascending:false}).limit(50);if(error)throw error;
   const freshCut=Date.now()-60*60*1000;
   const posts=(rawPosts||[]).filter(p=>new Date(p.created_at).getTime()>freshCut);
@@ -197,14 +238,15 @@ async function loadPosts(){
   const {data:likes}=await sb.from('post_likes').select('post_id,user_id').in('post_id',ids);
   const commentNames=await profiles((comments||[]).map(c=>c.user_id));
   await loadRisk([...(posts||[]).map(p=>p.user_id),...(comments||[]).map(c=>c.user_id)]);
-  el.innerHTML=posts.map(p=>{const path=sb.storage.from('pic-wall').getPublicUrl(p.image_path).data.publicUrl;const cs=(comments||[]).filter(c=>c.post_id===p.id);const count=(likes||[]).filter(l=>l.post_id===p.id).length;const liked=(likes||[]).some(l=>l.post_id===p.id&&l.user_id===me.id);return `<article class="post"><img class="wallPhoto" src="${esc(path)}" alt="Community post" onclick="openPhoto('${p.id}')"><div class="postbody"><div class="meta"><span>${riskDot(p.user_id)}@${esc(names[p.user_id]||'HUSH member')}</span><span>${new Date(p.created_at).toLocaleTimeString([], {hour:'2-digit',minute:'2-digit'})}</span></div><p>${esc(p.caption)}</p><div class="actions"><button class="linkbtn" onclick="toggleLike('${p.id}',${liked})">${liked?'♥':'♡'} ${count} Likes</button><button class="linkbtn" onclick="toggleComments('${p.id}')">Comments (${cs.length})</button><button class="linkbtn" onclick="reportItem('post','${p.id}','${p.user_id}')">Report</button><button class="linkbtn" onclick="markPhoto('${p.id}')">Mark delete</button>${isAdminUser?`<button class="linkbtn" onclick="adminDeletePhoto('${p.id}')">Delete</button>`:''}</div><div id="comments-${p.id}" class="comments hidden">${cs.map(c=>`<div class="comment"><b>${riskDot(c.user_id)}@${esc(commentNames[c.user_id]||'member')}</b> ${esc(c.body)} <button class="linkbtn" onclick="reportItem('comment','${c.id}','${c.user_id}')">Report</button></div>`).join('')}<form class="commentform" onsubmit="addComment(event,'${p.id}')"><input maxlength="180" placeholder="Write a comment…" required><button class="linkbtn">Send</button></form></div></div></article>`}).join('');
+  el.innerHTML=posts.map(p=>{const path=sb.storage.from('pic-wall').getPublicUrl(p.image_path).data.publicUrl;const cs=(comments||[]).filter(c=>c.post_id===p.id);const count=(likes||[]).filter(l=>l.post_id===p.id).length;const liked=(likes||[]).some(l=>l.post_id===p.id&&l.user_id===me.id);return `<article class="post"><img class="wallPhoto" src="${esc(path)}" alt="Community post" onclick="openPhoto('${p.id}')"><div class="postbody"><div class="meta"><span>${riskDot(p.user_id)}@${esc(names[p.user_id]||'HUSH member')}</span><span>${Number(p.view_count)||0} views</span><span>${new Date(p.created_at).toLocaleTimeString([], {hour:'2-digit',minute:'2-digit'})}</span></div><p>${esc(p.caption)}</p><div class="actions"><button class="linkbtn" onclick="toggleLike('${p.id}',${liked})">${liked?'♥':'♡'} ${count} Likes</button><button class="linkbtn" onclick="toggleComments('${p.id}')">Comments (${cs.length})</button><button class="linkbtn" onclick="reportItem('post','${p.id}','${p.user_id}')">Report</button><button class="linkbtn" onclick="markPhoto('${p.id}')">Mark delete</button>${isAdminUser?`<button class="linkbtn" onclick="adminDeletePhoto('${p.id}')">Delete</button>`:''}</div><div id="comments-${p.id}" class="comments hidden">${cs.map(c=>`<div class="comment"><b>${riskDot(c.user_id)}@${esc(commentNames[c.user_id]||'member')}</b> ${esc(c.body)} <button class="linkbtn" onclick="reportItem('comment','${c.id}','${c.user_id}')">Report</button></div>`).join('')}<form class="commentform" onsubmit="addComment(event,'${p.id}')"><input maxlength="180" placeholder="Write a comment…" required><button class="linkbtn">Send</button></form></div></div></article>`}).join('');
  }catch(e){el.innerHTML=`<div class="empty">Could not load Pic Wall: ${esc(e.message)}</div>`}
 }
-window.openPhoto=id=>{
+window.openPhoto=async id=>{
  const p=wallCache[id];
  if(!p){notify('Photo not found.');return}
+ try{const seen=await sb.rpc('record_post_view',{pid:id}); if(!seen.error&&seen.data!=null)p.view_count=seen.data}catch(e){}
  const url=sb.storage.from('pic-wall').getPublicUrl(p.image_path).data.publicUrl;
- modal(`<div class="fullPhoto"><img src="${esc(url)}" alt="Full photo"></div><p>${esc(p.caption||'')}</p><p class="hint">This photo is removed automatically after 1 hour. Members can mark it. Only an admin can delete it.</p><button class="btn secondary" type="button" onclick="markPhoto('${p.id}')">Mark for delete</button>${isAdminUser?`<button class="btn danger" type="button" onclick="adminDeletePhoto('${p.id}')">Delete photo</button>`:''}`);
+ modal(`<div class="fullPhoto"><img src="${esc(url)}" alt="Full photo"></div><p>${esc(p.caption||'')}</p><p class="hint">${Number(p.view_count)||0} people viewed this photo. It is removed after 1 hour. Members can mark it. Only an admin can delete it.</p><button class="btn secondary" type="button" onclick="markPhoto('${p.id}')">Mark for delete</button>${isAdminUser?`<button class="btn danger" type="button" onclick="adminDeletePhoto('${p.id}')">Delete photo</button>`:''}`);
  const box=document.querySelector('.modalBox'); if(box) box.classList.add('wide');
 };
 window.markPhoto=async id=>{
@@ -240,7 +282,7 @@ window.adminDeleteGroup=async id=>{
   loadGroups();
  }catch(e){notify(e.message||'Could not delete the group. The cleanup SQL may still need to be run once.')}
 };
-$('postBtn').onclick=()=>modal(`<h3>Share a picture</h3><form id="uploadForm"><div class="field"><label>JPG, PNG, or WebP. Max 5 MB.</label><input id="photo" type="file" accept="image/jpeg,image/png,image/webp" required><img id="photoPreview" class="previewShot hidden" alt="Preview"></div><div class="field"><label>Caption</label><textarea id="caption" maxlength="240" placeholder="Add a few words…"></textarea></div><p class="hint">Check the preview first. An admin will approve it. The photo is removed after 1 hour.</p><button class="btn primary">Submit for review</button></form>`);
+$('postBtn').onclick=()=>modal(`<h3>Share a picture</h3><form id="uploadForm"><div class="field"><label>JPG, PNG, or WebP. Max 2 MB.</label><input id="photo" type="file" accept="image/jpeg,image/png,image/webp" required><img id="photoPreview" class="previewShot hidden" alt="Preview"></div><div class="field"><label>Caption</label><textarea id="caption" maxlength="240" placeholder="Add a few words…"></textarea></div><p class="hint">Check the preview first. An admin will approve it. The photo is removed after 1 hour.</p><button class="btn primary">Submit for review</button></form>`);
 $('refreshWall').onclick=()=>loadPosts();
 function maybeGuide(){
  try{if(localStorage.getItem('hush_guide_ok')==='yes')return}catch(e){return}
@@ -257,7 +299,7 @@ $('modalBody').addEventListener('change',e=>{
  img.classList.remove('hidden');
 });
 $('modalBody').addEventListener('submit',async e=>{
- if(e.target.id==='uploadForm'){e.preventDefault();const f=$('photo').files[0];if(!f)return;if(f.size>5*1024*1024){notify('Image must be under 5 MB.');return}const cap=$('caption').value||'';const badCap=safetyBlock(cap);if(badCap){notify(badCap);return}try{await assertCanPost();const ext=f.name.split('.').pop().toLowerCase();const path=`${me.id}/${crypto.randomUUID()}.${ext}`;let r=await sb.storage.from('pic-wall').upload(path,f,{contentType:f.type,upsert:false});if(r.error)throw r.error;let p=await sb.from('posts').insert({user_id:me.id,image_path:path,caption:cap,approved:false});if(p.error)throw p.error;closeModal();notify('Photo submitted for admin review.');}catch(err){notify(err.message)}}
+ if(e.target.id==='uploadForm'){e.preventDefault();const f=$('photo').files[0];if(!f)return;if(f){const badPhoto=imageFileError(f);if(badPhoto){notify(badPhoto);return}}const cap=$('caption').value||'';const badCap=safetyBlock(cap);if(badCap){notify(badCap);return}try{await assertCanPost();const ext=f.name.split('.').pop().toLowerCase();const path=`${me.id}/${crypto.randomUUID()}.${ext}`;let r=await sb.storage.from('pic-wall').upload(path,f,{contentType:f.type,upsert:false});if(r.error)throw r.error;let p=await sb.from('posts').insert({user_id:me.id,image_path:path,caption:cap,approved:false});if(p.error)throw p.error;closeModal();notify('Photo submitted for admin review.');}catch(err){notify(err.message)}}
  if(e.target.id==='dmForm'){e.preventDefault();await startDM($('dmUsername').value)}
  if(e.target.id==='groupForm'){e.preventDefault();await createGroup($('gName').value,$('gDesc').value,$('gPrivate').checked)}
 });
@@ -270,20 +312,20 @@ async function startDM(u){u=u.trim().replace(/^@/,'');try{const {data:target,err
  const [a,b]=[me.id,target.id].sort();let {data:c,error:ce}=await sb.from('conversations').select('*').eq('user_a',a).eq('user_b',b).maybeSingle();if(ce)throw ce;if(!c){const r=await sb.from('conversations').insert({user_a:a,user_b:b}).select().single();if(r.error){const retry=await sb.from('conversations').select('*').eq('user_a',a).eq('user_b',b).single();if(retry.error)throw r.error;c=retry.data}else c=r.data}
  closeModal();activeDM={id:c.id,otherId:target.id,otherName:target.username};page('chats');await loadDMs();await openDM(c.id,target.id,target.username);
  }catch(e){notify(e.message)}}
-async function loadDMs(){try{const {data,error}=await sb.from('conversations').select('*').or(`user_a.eq.${me.id},user_b.eq.${me.id}`).order('created_at',{ascending:false});if(error)throw error;const others=(data||[]).map(c=>({c,other:c.user_a===me.id?c.user_b:c.user_a}));const ns=await profiles(others.map(x=>x.other));await loadRisk(others.map(x=>x.other));const ids=others.map(x=>x.c.id);let last={};if(ids.length){const {data:msgs}=await sb.from('messages').select('conversation_id,body,created_at').in('conversation_id',ids).order('created_at',{ascending:false}).limit(80);(msgs||[]).forEach(m=>{if(!last[m.conversation_id])last[m.conversation_id]=m.body||'Photo'})}$('chatList').innerHTML=others.length?others.map(x=>`<div class="chatItem ${activeDM?.id===x.c.id?'active':''}" onclick="chooseDM('${x.c.id}','${x.other}','${esc(ns[x.other]||'Member')}')">◉ ${riskDot(x.other)}@${esc(ns[x.other]||'Member')}<small>${esc(last[x.c.id]||'New chat')}</small></div>`).join(''):'<div class="empty">No chats yet. Start one with a username.</div>';if(activeDM)await openDM(activeDM.id,activeDM.otherId,activeDM.otherName)}catch(e){$('chatList').innerHTML=`<div class="empty">${esc(e.message)}</div>`}}
+async function loadDMs(){try{await purgeVanish();const {data,error}=await sb.from('conversations').select('*').or(`user_a.eq.${me.id},user_b.eq.${me.id}`).order('created_at',{ascending:false});if(error)throw error;const others=(data||[]).map(c=>({c,other:c.user_a===me.id?c.user_b:c.user_a}));const ns=await profiles(others.map(x=>x.other));await loadRisk(others.map(x=>x.other));const ids=others.map(x=>x.c.id);let last={};if(ids.length){const {data:msgs}=await sb.from('messages').select('conversation_id,body,created_at').in('conversation_id',ids).order('created_at',{ascending:false}).limit(80);(msgs||[]).forEach(m=>{if(!last[m.conversation_id])last[m.conversation_id]=m.body||'Photo'})}$('chatList').innerHTML=others.length?others.map(x=>`<div class="chatItem ${activeDM?.id===x.c.id?'active':''}" onclick="chooseDM('${x.c.id}','${x.other}','${esc(ns[x.other]||'Member')}')">◉ ${riskDot(x.other)}@${esc(ns[x.other]||'Member')}<small>${esc(last[x.c.id]||'New chat')}</small></div>`).join(''):'<div class="empty">No chats yet. Start one with a username.</div>';if(activeDM)await openDM(activeDM.id,activeDM.otherId,activeDM.otherName)}catch(e){$('chatList').innerHTML=`<div class="empty">${esc(e.message)}</div>`}}
 window.chooseDM=(id,otherId,name)=>{activeDM={id,otherId,otherName:name};loadDMs()};
 async function signedChatUrl(path){if(!path)return null;const {data,error}=await sb.storage.from('chat-media').createSignedUrl(path,3600);if(error)throw error;return data.signedUrl}
 async function messageMarkup(m,otherName=''){let image='';if(m.image_path){try{const url=await signedChatUrl(m.image_path);image=`<a href="${esc(url)}" target="_blank" rel="noopener"><img class="chatPhoto" src="${esc(url)}" alt="Shared photo"></a>`}catch(e){image='<small>Photo unavailable</small>'}}return `<div class="bubble ${m.sender_id===me.id?'mine':''}">${m.body?`<div>${esc(m.body)}</div>`:''}${image}<small class="msgTime">${new Date(m.created_at).toLocaleTimeString([], {hour:'2-digit',minute:'2-digit'})}</small></div>`}
-async function openDM(id,otherId,name){if(dmChannel){await sb.removeChannel(dmChannel);dmChannel=null}const {data,error}=await sb.from('messages').select('*').eq('conversation_id',id).order('created_at');if(error){$('chatPanel').innerHTML=`<div class="empty">${esc(error.message)}</div>`;return}await drawDM(id,otherId,name,data||[]);dmChannel=sb.channel('dm-'+id).on('postgres_changes',{event:'INSERT',schema:'public',table:'messages',filter:`conversation_id=eq.${id}`},async payload=>{if(payload.new.sender_id!==me.id){const box=$('messages');if(box){box.insertAdjacentHTML('beforeend',await messageMarkup(payload.new));box.scrollTop=box.scrollHeight}}}).subscribe()}
-async function drawDM(id,otherId,name,msgs){const items=await Promise.all(msgs.map(m=>messageMarkup(m)));$('chatPanel').innerHTML=`<div class="chatHead">${riskDot(otherId)}@${esc(name)} <button class="linkbtn" style="float:right" onclick="reportItem('user','${otherId}','${otherId}')">Report</button> <button class="linkbtn" style="float:right" onclick="blockMember('${otherId}','${esc(name)}')">Block</button></div><div id="messages" class="messages">${items.join('')}</div><form class="sendForm mediaSend" onsubmit="sendDM(event,'${id}')"><label class="attachBtn" title="Attach photo">＋<input id="dmPhoto" type="file" accept="image/jpeg,image/png,image/webp" hidden></label><input id="dmText" maxlength="2000" placeholder="Write a message…"><button class="btn primary">Send</button></form><small class="chatHint">Photos are private. Screenshots are possible. Do not share a phone number, address, or personal details. Max 5 MB.</small>`;$('messages').scrollTop=$('messages').scrollHeight}
-window.sendDM=async(e,id)=>{e.preventDefault();const input=$('dmText'),file=$('dmPhoto')?.files?.[0],body=input.value.trim();if(!body&&!file)return;if(body){const bad=safetyBlock(body);if(bad){notify(bad);return}}if(file&&(file.size>5*1024*1024||!['image/jpeg','image/png','image/webp'].includes(file.type))){notify('Choose a JPG, PNG or WebP image under 5 MB.');return}try{await assertCanPost();let image_path=null;if(file){const ext=file.type==='image/png'?'png':file.type==='image/webp'?'webp':'jpg';image_path=`direct/${id}/${me.id}/${crypto.randomUUID()}.${ext}`;const up=await sb.storage.from('chat-media').upload(image_path,file,{contentType:file.type,upsert:false});if(up.error)throw up.error}const {data,error}=await sb.from('messages').insert({conversation_id:id,sender_id:me.id,body:body||null,image_path}).select().single();if(error)throw error;input.value='';if(file)file.value='';const box=$('messages');box.insertAdjacentHTML('beforeend',await messageMarkup(data));box.scrollTop=box.scrollHeight}catch(err){notify(err.message)}};
+async function openDM(id,otherId,name){if(dmChannel){await sb.removeChannel(dmChannel);dmChannel=null}await purgeVanish();const {data,error}=await sb.from('messages').select('*').eq('conversation_id',id).order('created_at');if(error){$('chatPanel').innerHTML=`<div class="empty">${esc(error.message)}</div>`;return}const fresh=(data||[]).filter(m=>!vanishOn||new Date(m.created_at).getTime()>Date.now()-5*60*1000);await drawDM(id,otherId,name,fresh);dmChannel=sb.channel('dm-'+id).on('postgres_changes',{event:'INSERT',schema:'public',table:'messages',filter:`conversation_id=eq.${id}`},async payload=>{if(payload.new.sender_id!==me.id){const box=$('messages');if(box){box.insertAdjacentHTML('beforeend',await messageMarkup(payload.new));box.scrollTop=box.scrollHeight}}}).subscribe()}
+async function drawDM(id,otherId,name,msgs){const items=await Promise.all(msgs.map(m=>messageMarkup(m)));$('chatPanel').innerHTML=`<div class="chatHead">${riskDot(otherId)}@${esc(name)} <button class="linkbtn" style="float:right" onclick="reportItem('user','${otherId}','${otherId}')">Report</button> <button class="linkbtn" style="float:right" onclick="blockMember('${otherId}','${esc(name)}')">Block</button></div><div id="messages" class="messages">${items.join('')}</div><form class="sendForm mediaSend" onsubmit="sendDM(event,'${id}')"><label class="attachBtn" title="Attach photo">＋<input id="dmPhoto" type="file" accept="image/jpeg,image/png,image/webp" hidden></label><input id="dmText" maxlength="2000" placeholder="Write a message…"><button class="btn primary">Send</button></form><small class="chatHint">Photos are private. Max 2 MB. When 5-minute delete is on, messages and photos disappear for everyone. Screenshots are still possible.</small>`;$('messages').scrollTop=$('messages').scrollHeight}
+window.sendDM=async(e,id)=>{e.preventDefault();const input=$('dmText'),file=$('dmPhoto')?.files?.[0],body=input.value.trim();if(!body&&!file)return;if(body){const bad=safetyBlock(body);if(bad){notify(bad);return}}if(file){const badFile=imageFileError(file);if(badFile){notify(badFile);return}}try{await assertCanPost();let image_path=null;if(file){const ext=file.type==='image/png'?'png':file.type==='image/webp'?'webp':'jpg';image_path=`direct/${id}/${me.id}/${crypto.randomUUID()}.${ext}`;const up=await sb.storage.from('chat-media').upload(image_path,file,{contentType:file.type,upsert:false});if(up.error)throw up.error}const {data,error}=await sb.from('messages').insert({conversation_id:id,sender_id:me.id,body:body||null,image_path}).select().single();if(error)throw error;input.value='';if(file)file.value='';const box=$('messages');box.insertAdjacentHTML('beforeend',await messageMarkup(data));box.scrollTop=box.scrollHeight}catch(err){notify(err.message)}};
 window.blockMember=async(id,name)=>{if(!confirm(`Block @${name}?`))return;const {error}=await sb.from('user_blocks').insert({blocker_id:me.id,blocked_id:id});if(error)notify(error.message);else{activeDM=null;notify('Member blocked.');page('profile')}};
 $('createGroup').onclick=()=>modal(`<h3>Create a group</h3><form id="groupForm"><div class="field"><label>Group name</label><input id="gName" maxlength="35" required></div><div class="field"><label>Short description</label><textarea id="gDesc" maxlength="150"></textarea></div><div class="field"><label><input id="gPrivate" type="checkbox" style="width:auto"> Private group (invites are not available yet)</label></div><button class="btn primary">Create group</button></form>`);
 async function createGroup(name,description,is_private){try{const bad=safetyBlock(name)||safetyBlock(description);if(bad){notify(bad);return}const {data:g,error}=await sb.from('groups').insert({name,description,owner_id:me.id,is_private}).select().single();if(error)throw error;const {error:je}=await sb.from('group_members').insert({group_id:g.id,user_id:me.id});if(je)throw je;closeModal();notify('Group created.');loadGroups()}catch(e){notify(e.message)}}
 async function loadGroups(){const el=$('groups');try{let q=sb.from('groups').select('*').order('created_at',{ascending:false});if(!isAdminUser)q=q.eq('is_private',false);const {data,error}=await q;if(error)throw error;if(!data?.length){el.innerHTML='<div class="empty">No public groups yet. Create the first one.</div>';return}const {data:members}=await sb.from('group_members').select('group_id,user_id').in('group_id',data.map(g=>g.id));el.innerHTML=data.map(g=>{const joined=(members||[]).some(m=>m.group_id===g.id&&m.user_id===me.id);const count=(members||[]).filter(m=>m.group_id===g.id).length;const del=isAdminUser?`<button class="btn danger" onclick="adminDeleteGroup('${g.id}')">Delete</button>`:'';return `<div class="groupCard"><div class="groupIcon">♧</div><h4>${esc(g.name)}</h4><p>${esc(g.description||'A HUSH community')}<br>${count} member(s)</p><button onclick="joinGroup('${g.id}',${joined})">${joined?'Open group':'Join group'}</button>${del}</div>`}).join('')}catch(e){el.innerHTML=`<div class="empty">${esc(e.message)}</div>`}}
 window.joinGroup=async(id,joined)=>{if(!joined){const {error}=await sb.from('group_members').insert({group_id:id,user_id:me.id});if(error){notify(error.message);return}}activeGroup=id;page('groups');openGroup(id)};
-async function openGroup(id){if(groupChannel){await sb.removeChannel(groupChannel);groupChannel=null}const {data:g}=await sb.from('groups').select('*').eq('id',id).single();if(g&&Number(g.disappear_after_hours)>0){try{await sb.rpc('sweep_group_messages',{gid:id})}catch(e){}}const {data:raw,error}=await sb.from('group_messages').select('*').eq('group_id',id).order('created_at');if(error){notify(error.message);return}let msgs=raw||[];if(g&&Number(g.disappear_after_hours)>0){const cut=Date.now()-24*60*60*1000;msgs=msgs.filter(m=>new Date(m.created_at).getTime()>cut)}const names=await profiles((msgs||[]).map(m=>m.sender_id));await loadRisk((msgs||[]).map(m=>m.sender_id));const items=await Promise.all((msgs||[]).map(async m=>{const html=await messageMarkup(m);return `<div class="groupMsgHead">${riskDot(m.sender_id)}@${esc(names[m.sender_id]||'member')} <button class="linkbtn" onclick="reportItem('user','${m.sender_id}','${m.sender_id}')">Report</button></div>${html}`}));$('groups').innerHTML=`<div class="groupCard groupChatCard" style="grid-column:1/-1"><button onclick="loadGroups()">← Back to groups</button>${isAdminUser?`<button class="btn danger" onclick="adminDeleteGroup('${id}')">Delete group</button>`:''}<h3>${esc(g.name)}</h3><p>${esc(g.description)}</p><div id="groupMessages" class="messages" style="height:260px;border:1px solid #eee;border-radius:12px">${items.join('')}</div><form class="sendForm mediaSend" onsubmit="sendGroup(event,'${id}')"><label class="attachBtn" title="Attach photo">＋<input id="groupPhoto" type="file" accept="image/jpeg,image/png,image/webp" hidden></label><input id="groupText" maxlength="2000" placeholder="Message the group…"><button class="btn primary">Send</button></form><small class="chatHint">${Number(g.disappear_after_hours)>0?'Messages disappear after 24 hours. ':''}Screenshots are possible. Do not share personal details. Max 5 MB.</small></div>`;groupChannel=sb.channel('group-'+id).on('postgres_changes',{event:'INSERT',schema:'public',table:'group_messages',filter:`group_id=eq.${id}`},async payload=>{if(payload.new.sender_id!==me.id){const n=await profiles([payload.new.sender_id]);const box=$('groupMessages');if(box){box.insertAdjacentHTML('beforeend',`<div class="groupMsgHead">@${esc(n[payload.new.sender_id]||'member')}</div>${await messageMarkup(payload.new)}`);box.scrollTop=box.scrollHeight}}}).subscribe()}
-window.sendGroup=async(e,id)=>{e.preventDefault();const input=$('groupText'),file=$('groupPhoto')?.files?.[0],body=input.value.trim();if(!body&&!file)return;if(body){const bad=safetyBlock(body);if(bad){notify(bad);return}}if(file&&(file.size>5*1024*1024||!['image/jpeg','image/png','image/webp'].includes(file.type))){notify('Choose a JPG, PNG or WebP image under 5 MB.');return}try{await assertCanPost();let image_path=null;if(file){const ext=file.type==='image/png'?'png':file.type==='image/webp'?'webp':'jpg';image_path=`group/${id}/${me.id}/${crypto.randomUUID()}.${ext}`;const up=await sb.storage.from('chat-media').upload(image_path,file,{contentType:file.type,upsert:false});if(up.error)throw up.error}const {data,error}=await sb.from('group_messages').insert({group_id:id,sender_id:me.id,body:body||null,image_path}).select().single();if(error)throw error;input.value='';if(file)file.value='';const box=$('groupMessages');box.insertAdjacentHTML('beforeend',`<div class="groupMsgHead">@${esc(username)}</div>${await messageMarkup(data)}`);box.scrollTop=box.scrollHeight}catch(err){notify(err.message)}};
+async function openGroup(id){if(groupChannel){await sb.removeChannel(groupChannel);groupChannel=null}await purgeVanish();const {data:g}=await sb.from('groups').select('*').eq('id',id).single();if(g&&Number(g.disappear_after_hours)>0){try{await sb.rpc('sweep_group_messages',{gid:id})}catch(e){}}const {data:raw,error}=await sb.from('group_messages').select('*').eq('group_id',id).order('created_at');if(error){notify(error.message);return}let msgs=raw||[];if(vanishOn){const cut5=Date.now()-5*60*1000;msgs=msgs.filter(m=>new Date(m.created_at).getTime()>cut5)}else if(g&&Number(g.disappear_after_hours)>0){const cut=Date.now()-24*60*60*1000;msgs=msgs.filter(m=>new Date(m.created_at).getTime()>cut)}const names=await profiles((msgs||[]).map(m=>m.sender_id));await loadRisk((msgs||[]).map(m=>m.sender_id));const items=await Promise.all((msgs||[]).map(async m=>{const html=await messageMarkup(m);return `<div class="groupMsgHead">${riskDot(m.sender_id)}@${esc(names[m.sender_id]||'member')} <button class="linkbtn" onclick="reportItem('user','${m.sender_id}','${m.sender_id}')">Report</button></div>${html}`}));$('groups').innerHTML=`<div class="groupCard groupChatCard" style="grid-column:1/-1"><button onclick="loadGroups()">← Back to groups</button>${isAdminUser?`<button class="btn danger" onclick="adminDeleteGroup('${id}')">Delete group</button>`:''}<h3>${esc(g.name)}</h3><p>${esc(g.description)}</p><div id="groupMessages" class="messages" style="height:260px;border:1px solid #eee;border-radius:12px">${items.join('')}</div><form class="sendForm mediaSend" onsubmit="sendGroup(event,'${id}')"><label class="attachBtn" title="Attach photo">＋<input id="groupPhoto" type="file" accept="image/jpeg,image/png,image/webp" hidden></label><input id="groupText" maxlength="2000" placeholder="Message the group…"><button class="btn primary">Send</button></form><small class="chatHint">${Number(g.disappear_after_hours)>0?'Messages disappear after 24 hours. ':''}Screenshots are possible. Do not share personal details. Max 2 MB.</small></div>`;groupChannel=sb.channel('group-'+id).on('postgres_changes',{event:'INSERT',schema:'public',table:'group_messages',filter:`group_id=eq.${id}`},async payload=>{if(payload.new.sender_id!==me.id){const n=await profiles([payload.new.sender_id]);const box=$('groupMessages');if(box){box.insertAdjacentHTML('beforeend',`<div class="groupMsgHead">@${esc(n[payload.new.sender_id]||'member')}</div>${await messageMarkup(payload.new)}`);box.scrollTop=box.scrollHeight}}}).subscribe()}
+window.sendGroup=async(e,id)=>{e.preventDefault();const input=$('groupText'),file=$('groupPhoto')?.files?.[0],body=input.value.trim();if(!body&&!file)return;if(body){const bad=safetyBlock(body);if(bad){notify(bad);return}}if(file){const badFile=imageFileError(file);if(badFile){notify(badFile);return}}try{await assertCanPost();let image_path=null;if(file){const ext=file.type==='image/png'?'png':file.type==='image/webp'?'webp':'jpg';image_path=`group/${id}/${me.id}/${crypto.randomUUID()}.${ext}`;const up=await sb.storage.from('chat-media').upload(image_path,file,{contentType:file.type,upsert:false});if(up.error)throw up.error}const {data,error}=await sb.from('group_messages').insert({group_id:id,sender_id:me.id,body:body||null,image_path}).select().single();if(error)throw error;input.value='';if(file)file.value='';const box=$('groupMessages');box.insertAdjacentHTML('beforeend',`<div class="groupMsgHead">@${esc(username)}</div>${await messageMarkup(data)}`);box.scrollTop=box.scrollHeight}catch(err){notify(err.message)}};
 $('blockBtn').onclick=async()=>{const u=$('blockUsername').value.trim().replace(/^@/,'');if(!u)return;const {data:p,error}=await sb.from('profiles').select('id').eq('username',u).maybeSingle();if(error||!p){notify(error?.message||'Username not found.');return}if(p.id===me.id){notify('You cannot block yourself.');return}const r=await sb.from('user_blocks').insert({blocker_id:me.id,blocked_id:p.id});notify(r.error?r.error.message:'Member blocked.');$('blockUsername').value='';loadBlocks()};
 async function loadBlocks(){try{const {data,error}=await sb.from('user_blocks').select('blocked_id').eq('blocker_id',me.id);if(error)throw error;const ns=await profiles((data||[]).map(x=>x.blocked_id));$('blockedList').innerHTML=data?.length?data.map(x=>`<div class="blockedRow">@${esc(ns[x.blocked_id]||'member')} <button class="linkbtn" onclick="unblock('${x.blocked_id}')">Unblock</button></div>`).join(''):'No blocked members.'}catch(e){$('blockedList').textContent=e.message}}
 window.unblock=async(id)=>{const {error}=await sb.from('user_blocks').delete().eq('blocker_id',me.id).eq('blocked_id',id);notify(error?error.message:'Unblocked.');loadBlocks()};
@@ -292,8 +334,9 @@ $('copyIdBtn').onclick=async()=>{try{await navigator.clipboard.writeText(me.id);
 document.querySelectorAll('.adminTab').forEach(b=>b.onclick=()=>{document.querySelectorAll('.adminTab').forEach(x=>x.classList.toggle('active',x===b));loadAdmin(b.dataset.adminTab)});
 async function requireAdmin(){const {data,error}=await sb.rpc('is_hush_admin');if(error)throw error;if(data!==true)throw new Error('Admin access is not enabled for this account. Run the admin setup SQL first.');}
 async function safetyAdminHtml(){
- let open=true, sqlNote='';
+ let open=true, vanish=true, sqlNote='';
  try{const {data,error}=await sb.rpc('signups_enabled'); if(error) sqlNote='Run supabase/secure_additive.sql once in the SQL Editor to use the new-member switch.'; else open=data!==false;}catch(e){sqlNote='The safety SQL still needs to be run once.'}
+ try{const {data,error}=await sb.rpc('vanish_enabled'); if(error) sqlNote=sqlNote||'Run supabase/live_rules.sql once to control 5-minute delete.'; else vanish=data===true;}catch(e){}
  let words=[];
  try{const {data,error}=await sb.rpc('list_safety_words'); if(!error&&Array.isArray(data)) words=data; else if(error) sqlNote=sqlNote||'Run the safety SQL to add extra words. The built-in filter is already on.';}catch(e){}
  let appeals=[];
@@ -304,13 +347,18 @@ async function safetyAdminHtml(){
  const wordHtml=words.length?words.map(w=>`<span class="wordchip">${esc(w)} <button type="button" class="linkbtn" data-del-word="${esc(w)}">×</button></span>`).join(''):'<span class="idSmall">No extra words yet.</span>';
  const appealHtml=appeals.length?appeals.map(a=>`<div class="reportRow"><div><b>@${esc(a.username||'member')}</b><p>${esc(a.message||'')}</p><small>${esc(a.status)} · ${a.created_at?new Date(a.created_at).toLocaleString():''}</small></div><div>${a.status==='pending'?`<button class="btn primary" data-appeal="${a.id}" data-accept="1">Accept</button> <button class="btn danger" data-appeal="${a.id}" data-accept="0">Reject</button>`:`<span class="idSmall">${esc(a.status)}</span>`}</div></div>`).join(''):'<div class="empty">No appeals.</div>';
  const groupHtml=groups.length?groups.map(g=>`<div class="reportRow"><div><b>${esc(g.name)}</b><p>${Number(g.disappear_after_hours)>0?'24h disappearing on':'Messages saved'}</p></div><button class="btn secondary" data-disappear="${g.id}" data-on="${Number(g.disappear_after_hours)>0?'0':'1'}">${Number(g.disappear_after_hours)>0?'Turn off':'24h on'}</button></div>`).join(''):'<div class="empty">No groups.</div>';
- return `<div class="reportRow"><div><b>New members</b><p>${open?'Joining is open. New anonymous members can sign up.':'Joining is off. Existing members and admin login still work.'}</p><small>${esc(sqlNote)}</small></div><button id="signupToggle" class="btn ${open?'danger':'primary'}">${open?'Turn off':'Turn on'}</button></div><h3 style="margin:18px 0 8px">Safety words</h3><p class="idSmall">Phone numbers, emails, and links are always blocked. Built-in: ${esc(BUILTIN_WORDS.join(', '))}</p><form id="wordForm" class="inline" style="margin:10px 0"><input id="newWord" maxlength="40" placeholder="word or phrase"><button class="btn secondary" type="submit">Add</button></form><div id="wordList">${wordHtml}</div><h3 style="margin:18px 0 8px">Ban appeals</h3>${appealHtml}<h3 style="margin:18px 0 8px">Disappearing group chats</h3><p class="idSmall">When this is on, messages older than 24 hours in that group are deleted.</p>${groupHtml}`;
+ return `<div class="reportRow"><div><b>New members</b><p>${open?'Joining is open. New anonymous members can sign up.':'Joining is off. Existing members and admin login still work.'}</p><small>${esc(sqlNote)}</small></div><button id="signupToggle" class="btn ${open?'danger':'primary'}">${open?'Turn off':'Turn on'}</button></div><div class="reportRow"><div><b>5-minute delete</b><p>${vanish?'On for the whole app. Private chats, group chats, and comments disappear after 5 minutes, including pictures. Members cannot turn this off.':'Off. Messages stay until another rule deletes them.'}</p></div><button id="vanishToggle" class="btn ${vanish?'danger':'primary'}" data-on="${vanish?'1':'0'}">${vanish?'Turn off':'Turn on'}</button></div><h3 style="margin:18px 0 8px">Safety words</h3><p class="idSmall">Phone numbers, emails, and links are always blocked. Built-in: ${esc(BUILTIN_WORDS.join(', '))}</p><form id="wordForm" class="inline" style="margin:10px 0"><input id="newWord" maxlength="40" placeholder="word or phrase"><button class="btn secondary" type="submit">Add</button></form><div id="wordList">${wordHtml}</div><h3 style="margin:18px 0 8px">Ban appeals</h3>${appealHtml}<h3 style="margin:18px 0 8px">Disappearing group chats</h3><p class="idSmall">When this is on, messages older than 24 hours in that group are deleted.</p>${groupHtml}`;
 }
 function bindSafetyAdmin(){
  const t=$('signupToggle');
  if(t) t.onclick=async()=>{
   const enabled=/turn on/i.test(t.textContent);
   try{const {error}=await sb.rpc('set_signups_enabled',{enabled}); if(error) throw error; notify(enabled?'New members on.':'New members off.'); loadAdmin('safety');}catch(e){notify(e.message||'Could not save the switch. Run the safety SQL once.')}
+ };
+ const v=$('vanishToggle');
+ if(v) v.onclick=async()=>{
+  const enabled=v.dataset.on!=='1';
+  try{const {error}=await sb.rpc('set_vanish_enabled',{enabled}); if(error) throw error; vanishOn=enabled; notify(enabled?'5-minute delete is on.':'5-minute delete is off.'); loadAdmin('safety');}catch(e){notify(e.message||'Could not save. Run live_rules.sql once.')}
  };
  const form=$('wordForm');
  if(form) form.onsubmit=async e=>{
@@ -337,6 +385,20 @@ window.adminBan=async(id,name)=>{if(!confirm(`Ban @${name} from the HUSH app?`))
 window.adminUnban=async id=>{const {error}=await sb.from('banned_users').delete().eq('user_id',id);notify(error?error.message:'Member unbanned.');loadAdmin('members')};
 let ticGame=null, ticChannel=null;
 function ticRow(data){return Array.isArray(data)?data[0]:data}
+async function loadTicMembers(){
+ const el=$('ticMembers');
+ if(!el) return;
+ try{
+  const {data,error}=await sb.rpc('list_game_members');
+  if(error) throw error;
+  const rows=data||[];
+  el.innerHTML=rows.length?rows.map(m=>{
+   const code=m.challenge_code||m.open_code||'';
+   const label=m.challenge_code?'Join challenge':m.open_code?'Join game':'Challenge';
+   return `<button type="button" class="memberPick" data-id="${m.id}" data-code="${esc(code)}"><b>@${esc(m.username)}</b><small>${label}</small></button>`;
+  }).join(''):'<div class="empty">No members are in the app right now.</div>';
+ }catch(e){el.innerHTML='<div class="empty">Members show here after the new SQL is run.</div>'}
+}
 function renderTic(){
  const g=ticGame, board=$('ticBoard'), status=$('ticStatus'), code=$('ticCodeShow');
  if(!board) return;
@@ -360,6 +422,24 @@ async function watchTic(g){
  ticChannel=sb.channel('tic-'+g.id).on('postgres_changes',{event:'UPDATE',schema:'public',table:'tic_games',filter:'id=eq.'+g.id},payload=>{ticGame=payload.new; renderTic()}).subscribe();
  renderTic();
 }
+$('ticMembers').onclick=async ev=>{
+ const b=ev.target.closest('.memberPick');
+ if(!b) return;
+ try{
+  if(b.dataset.code){
+   const {data,error}=await sb.rpc('join_tic_game',{game_code:b.dataset.code});
+   if(error) throw error;
+   const g=ticRow(data); if(!g) throw new Error('Game not found.');
+   await watchTic(g);
+  }else{
+   const {data,error}=await sb.rpc('create_tic_challenge',{invite:b.dataset.id});
+   if(error) throw error;
+   const g=ticRow(data); if(!g) throw new Error('Could not challenge.');
+   await watchTic(g);
+   notify('Challenge sent. They can join from this list.');
+  }
+ }catch(err){notify(err.message||'Could not start that game.')}
+};
 $('newTic').onclick=async()=>{
  try{
   const {data,error}=await sb.rpc('create_tic_game');
