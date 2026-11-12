@@ -71,7 +71,7 @@ function showError(t){$('loginError').textContent=t}
 function modal(html){$('modalBody').innerHTML=html;$('modal').classList.remove('hidden')}
 function closeModal(){$('modal').classList.add('hidden');const box=document.querySelector('.modalBox');if(box)box.classList.remove('wide')}
 $('closeModal').onclick=closeModal;$('modal').onclick=e=>{if(e.target===$('modal'))closeModal()};
-function page(p){document.querySelectorAll('.nav').forEach(b=>b.classList.toggle('active',b.dataset.page===p));['wall','chats','groups','profile','admin'].forEach(x=>$(x+'Page').classList.toggle('hidden',x!==p));$('sectionTitle').textContent={wall:'Pic Wall',chats:'Chats',groups:'Groups',profile:'Profile & safety',admin:'Admin panel'}[p];$('sectionKicker').textContent={wall:'COMMUNITY SPACE',chats:'PRIVATE MESSAGES',groups:'YOUR COMMUNITIES',profile:'ACCOUNT & PRIVACY',admin:'MODERATION & SAFETY'}[p];if(p==='wall')loadPosts();if(p==='chats')loadDMs();if(p==='groups')loadGroups();if(p==='profile')loadBlocks();if(p==='admin')loadAdmin('pending')}
+function page(p){document.querySelectorAll('.nav').forEach(b=>b.classList.toggle('active',b.dataset.page===p));['wall','chats','groups','games','profile','admin'].forEach(x=>$(x+'Page').classList.toggle('hidden',x!==p));$('sectionTitle').textContent={wall:'Pic Wall',chats:'Chats',groups:'Groups',games:'Tic-tac',profile:'Profile & safety',admin:'Admin panel'}[p];$('sectionKicker').textContent={wall:'COMMUNITY SPACE',chats:'PRIVATE MESSAGES',groups:'YOUR COMMUNITIES',games:'TWO PLAYERS',profile:'ACCOUNT & PRIVACY',admin:'MODERATION & SAFETY'}[p];if(p==='wall')loadPosts();if(p==='chats')loadDMs();if(p==='groups')loadGroups();if(p==='games')renderTic();if(p==='profile')loadBlocks();if(p==='admin')loadAdmin('pending')}
 document.querySelectorAll('.nav').forEach(b=>b.onclick=()=>page(b.dataset.page));
 async function init(){
  if(!ageOk()){$('ageGate').classList.remove('hidden');$('login').classList.add('hidden');return}
@@ -323,9 +323,9 @@ function bindSafetyAdmin(){
   const del=ev.target.closest('[data-del-word]');
   if(del){try{const {error}=await sb.rpc('remove_safety_word',{word:del.getAttribute('data-del-word')}); if(error) throw error; loadAdmin('safety');}catch(e){notify(e.message)} return}
   const ap=ev.target.closest('[data-appeal]');
-  if(ap){try{const {error}=await sb.rpc('decide_ban_appeal',{appeal_id:ap.dataset.appeal, accept:ap.dataset.accept==='1'}); if(error) throw error; notify('Appeal update ho gaya.'); loadAdmin('safety');}catch(e){notify(e.message)} return}
+  if(ap){try{const {error}=await sb.rpc('decide_ban_appeal',{appeal_id:ap.dataset.appeal, accept:ap.dataset.accept==='1'}); if(error) throw error; notify('Appeal updated.'); loadAdmin('safety');}catch(e){notify(e.message)} return}
   const d=ev.target.closest('[data-disappear]');
-  if(d){try{const {error}=await sb.rpc('set_group_disappear',{gid:d.dataset.disappear, turn_on:d.dataset.on==='1'}); if(error) throw error; notify('Group setting save ho gayi.'); loadAdmin('safety');}catch(e){notify(e.message)}}
+  if(d){try{const {error}=await sb.rpc('set_group_disappear',{gid:d.dataset.disappear, turn_on:d.dataset.on==='1'}); if(error) throw error; notify('Group setting saved.'); loadAdmin('safety');}catch(e){notify(e.message)}}
  };
 }
 async function loadAdmin(tab='pending'){const el=$('adminContent');el.innerHTML='<div class="empty">Loading…</div>';try{await requireAdmin();try{const p=await sb.from('posts').select('id',{count:'exact',head:true}).eq('approved',false);const r=await sb.from('reports').select('id',{count:'exact',head:true}).neq('status','resolved');const pulse=$('adminPulse');if(pulse)pulse.innerHTML=`<span>${p.error?'–':(p.count||0)} pending photos</span><span>${r.error?'–':(r.count||0)} open reports</span><span>Only admins can delete</span>`}catch(e){}if(tab==='pending'){const {data,error}=await sb.from('posts').select('*').eq('approved',false).order('created_at',{ascending:true});if(error)throw error;if(!data.length){el.innerHTML='<div class="empty">No photos waiting for review.</div>';return}const names=await profiles(data.map(x=>x.user_id));el.innerHTML=`<div class="adminGrid">${data.map(p=>{const url=sb.storage.from('pic-wall').getPublicUrl(p.image_path).data.publicUrl;return `<article class="adminCard"><img src="${esc(url)}" alt="Pending community photo"><div><b>@${esc(names[p.user_id]||'member')}</b><p>${esc(p.caption||'No caption')}</p><small>${new Date(p.created_at).toLocaleString()}</small><div class="adminActions"><button class="btn primary" onclick="adminApprove('${p.id}')">Approve</button><button class="btn danger" onclick="adminReject('${p.id}','${esc(p.image_path)}')">Reject</button></div></div></article>`}).join('')}</div>`}else if(tab==='reports'){const {data,error}=await sb.from('reports').select('*').order('created_at',{ascending:false}).limit(100);if(error)throw error;if(!data.length){el.innerHTML='<div class="empty">No reports. Nice and quiet.</div>';return}await loadRisk(data.map(r=>r.target_user_id).filter(Boolean));el.innerHTML=data.map(r=>`<div class="reportRow"><div><b>${riskDot(r.target_user_id)}${esc(r.target_type)} report</b><p>${esc(r.reason)}</p><small>Status: ${esc(r.status)} · ${r.target_user_id?((riskMap[r.target_user_id]||0)+' distinct report(s)'):'older report'} · ${new Date(r.created_at).toLocaleString()}</small></div><div><button class="btn secondary" onclick="adminReportStatus('${r.id}','reviewing')">Review</button> <button class="btn primary" onclick="adminReportStatus('${r.id}','resolved')">Resolve</button>${r.target_user_id?` <button class="btn secondary" onclick="adminClearLock('${r.target_user_id}')">Clear posting lock</button>`:''}</div></div>`).join('')}else if(tab==='photos'){const listed=await sb.rpc('list_posts_for_admin');if(listed.error)throw listed.error;const rows=listed.data||[];rows.forEach(p=>{wallCache[p.id]=p});if(!rows.length){el.innerHTML='<div class="empty">No photos. Photos older than 1 hour are removed automatically.</div>';return}el.innerHTML=`<p class="idSmall">Members can mark photos. Only an admin can delete them. Every photo is removed after 1 hour.</p><div class="adminGrid">${rows.map(p=>{const url=p.image_path?sb.storage.from('pic-wall').getPublicUrl(p.image_path).data.publicUrl:'';return `<article class="adminCard">${url?`<img class="wallPhoto" src="${esc(url)}" alt="Photo" onclick="openPhoto('${p.id}')">`:''}<div><b>@${esc(p.username||'member')}</b><p>${esc(p.caption||'No caption')}</p><small>${Number(p.marks)||0} mark(s) · ${p.approved?'live':'pending'} · ${new Date(p.created_at).toLocaleString()}</small><div class="adminActions"><button class="btn danger" onclick="adminDeletePhoto('${p.id}')">Delete</button></div></div></article>`}).join('')}</div>`}else if(tab==='safety'){el.innerHTML=await safetyAdminHtml();bindSafetyAdmin()}else{const {data:users,error}=await sb.from('profiles').select('id,username,created_at').order('created_at',{ascending:false}).limit(150);if(error)throw error;const {data:bans,error:banError}=await sb.from('banned_users').select('user_id');if(banError)throw banError;const banned=new Set((bans||[]).map(x=>x.user_id));await loadRisk((users||[]).map(u=>u.id));el.innerHTML=users.map(u=>{const n=riskMap[u.id]||0;return `<div class="reportRow"><div><b>${riskDot(u.id)}@${esc(u.username)}</b><p class="idSmall">${esc(u.id)}</p><small>Joined ${new Date(u.created_at).toLocaleDateString()} · ${n} report(s)${n>=3?' · posting paused':''}</small></div><div>${n>=3?`<button class="btn secondary" onclick="adminClearLock('${u.id}')">Clear posting lock</button> `:''}${banned.has(u.id)?`<button class="btn secondary" onclick="adminUnban('${u.id}')">Unban</button>`:`<button class="btn danger" onclick="adminBan('${u.id}','${esc(u.username)}')">Ban</button>`}</div></div>`}).join('')||'<div class="empty">No members found.</div>'}}catch(e){el.innerHTML=`<div class="empty">${esc(e.message)}<br><br>Admin tools are hidden until your account ID is added to admin_users using the setup SQL file.</div>`}}
@@ -335,5 +335,61 @@ window.adminReportStatus=async(id,status)=>{const {error}=await sb.from('reports
 window.adminClearLock=async id=>{if(!confirm('Allow this member to post again? Older reports will stop counting.'))return;const {error}=await sb.rpc('admin_clear_post_lock',{uid:id});if(error){notify(error.message);return}delete riskMap[id];notify('Posting lock cleared.');loadAdmin('members')};
 window.adminBan=async(id,name)=>{if(!confirm(`Ban @${name} from the HUSH app?`))return;const {error}=await sb.from('banned_users').insert({user_id:id,reason:'Admin moderation'});notify(error?error.message:'Member banned.');loadAdmin('members')};
 window.adminUnban=async id=>{const {error}=await sb.from('banned_users').delete().eq('user_id',id);notify(error?error.message:'Member unbanned.');loadAdmin('members')};
+let ticGame=null, ticChannel=null;
+function ticRow(data){return Array.isArray(data)?data[0]:data}
+function renderTic(){
+ const g=ticGame, board=$('ticBoard'), status=$('ticStatus'), code=$('ticCodeShow');
+ if(!board) return;
+ if(!g){board.innerHTML=''; status.textContent='Start a game or join with a code.'; code.textContent=''; return}
+ const mine=g.player_x===me.id?'x':(g.player_o===me.id?'o':'');
+ code.textContent=g.code?('Code '+g.code):'';
+ let text='';
+ if(g.status==='waiting') text='Waiting for the other player. Share the code.';
+ else if(g.status==='done') text=g.winner==='draw'?'Draw.':((g.winner===mine?'You win.':'You lose.')+' The game is over.');
+ else text=(g.turn===mine?'Your turn.':'Waiting for the other player.')+' You are '+(mine||'?').toUpperCase()+'.';
+ status.textContent=text;
+ const myTurn=g.status==='playing' && g.turn===mine;
+ board.innerHTML=g.board.split('').map((mark,i)=>{
+  const label=mark==='-'?'':mark.toUpperCase();
+  return `<button type="button" ${myTurn&&mark==='-'?'':'disabled'} onclick="playTic(${i+1})">${label}</button>`;
+ }).join('');
+}
+async function watchTic(g){
+ ticGame=g;
+ if(ticChannel){await sb.removeChannel(ticChannel); ticChannel=null}
+ ticChannel=sb.channel('tic-'+g.id).on('postgres_changes',{event:'UPDATE',schema:'public',table:'tic_games',filter:'id=eq.'+g.id},payload=>{ticGame=payload.new; renderTic()}).subscribe();
+ renderTic();
+}
+$('newTic').onclick=async()=>{
+ try{
+  const {data,error}=await sb.rpc('create_tic_game');
+  if(error) throw error;
+  const g=ticRow(data);
+  if(!g) throw new Error('Could not start the game.');
+  await watchTic(g);
+  notify('Game ready. Share the code.');
+ }catch(e){notify(e.message||'Could not start. Run the tic-tac SQL once.')}
+};
+$('joinTic').onsubmit=async e=>{
+ e.preventDefault();
+ const game_code=$('ticCode').value.trim();
+ if(!game_code) return;
+ try{
+  const {data,error}=await sb.rpc('join_tic_game',{game_code});
+  if(error) throw error;
+  const g=ticRow(data);
+  if(!g) throw new Error('Game not found.');
+  await watchTic(g);
+ }catch(err){notify(err.message||'Could not join. Run the tic-tac SQL once.')}
+};
+window.playTic=async cell=>{
+ if(!ticGame) return;
+ try{
+  const {data,error}=await sb.rpc('play_tic',{game_code:ticGame.code, cell});
+  if(error) throw error;
+  ticGame=ticRow(data)||ticGame;
+  renderTic();
+ }catch(e){notify(e.message||'Move was not saved.')}
+};
 
 init();
