@@ -54,12 +54,12 @@
 <button id="signOut" class="signout">↪ Sign out</button></aside>
 <main class="main"><header class="topbar"><div><small id="sectionKicker">COMMUNITY SPACE</small><h2 id="sectionTitle">Pic Wall</h2></div><div class="status"><i></i> Connected</div></header>
 <section id="wallPage" class="page"><div class="banner wallBanner"><div><small>SHARE A MOMENT</small><h1>A wall without<br>the labels.</h1><p>Post a picture. Start a conversation. Stay anonymous.</p></div><div class="symbol">✳</div></div>
-<div class="sectionhead"><div><h3>Community wall</h3><p>Posts appear after moderation approval.</p></div><button id="postBtn" class="btn primary">＋ Share a picture</button></div><div id="posts" class="cards"><div class="empty">Loading the wall…</div></div></section>
+<div class="sectionhead"><div><h3>Community wall</h3><p>Photo pe tap karo, poori dikhegi. 1 ghante baad khud hat jaati hai.</p></div><div class="inline"><button id="refreshWall" class="btn secondary" type="button">Refresh</button><button id="postBtn" class="btn primary">＋ Photo bhejo</button></div></div><div id="posts" class="cards"><div class="empty">Loading the wall…</div></div></section>
 <section id="chatsPage" class="page hidden"><div class="banner chatBanner"><div><small>PRIVATE CONVERSATIONS</small><h1>Your people,<br>your space.</h1><p>One-to-one conversations, without revealing your identity.</p></div><div class="symbol">✉</div></div>
-<div class="sectionhead"><div><h3>Your conversations</h3><p>Find a member by their HUSH username.</p></div><button id="newChat" class="btn primary">＋ New chat</button></div>
-<div class="chatLayout"><div id="chatList" class="chatList"><div class="empty">No conversations yet.</div></div><div id="chatPanel" class="chatPanel"><div class="empty">Choose a conversation.</div></div></div></section>
+<div class="sectionhead"><div><h3>Your conversations</h3><p>Username se baat shuru karo. Phone number mat likho.</p></div><button id="newChat" class="btn primary">＋ Nayi baat</button></div>
+<div class="chatLayout"><div id="chatList" class="chatList"><div class="empty">Abhi koi baat nahi.</div></div><div id="chatPanel" class="chatPanel"><div class="empty">Baat choose karo.</div></div></div></section>
 <section id="groupsPage" class="page hidden"><div class="banner groupBanner"><div><small>FIND YOUR COMMUNITY</small><h1>Better together.</h1><p>Create a space around an interest.</p></div><div class="symbol">✺</div></div>
-<div class="sectionhead"><div><h3>Explore groups</h3><p>Join a public group or create your own.</p></div><button id="createGroup" class="btn primary">＋ Create group</button></div><div id="groups" class="groupGrid"><div class="empty">Loading groups…</div></div></section>
+<div class="sectionhead"><div><h3>Explore groups</h3><p>Group join karo, ya apna banao.</p></div><button id="createGroup" class="btn primary">＋ Group banao</button></div><div id="groups" class="groupGrid"><div class="empty">Loading groups…</div></div></section>
 <section id="profilePage" class="page hidden"><div class="banner profileBanner"><div><small>YOUR SPACE</small><h1>Your identity.<br>Your choices.</h1><p>Manage your anonymous profile and privacy.</p></div><div class="symbol">◎</div></div>
 <div class="profileBox"><div class="avatar big" id="profileAvatar">?</div><h3 id="profileUsername">Member</h3><p>Anonymous HUSH member</p><p class="account-id">Account ID: <code id="profileId">Loading…</code></p><button class="btn secondary" id="copyIdBtn" type="button">Copy account ID (for admin setup)</button></div>
 <div class="sectionhead"><div><h3>Block a member</h3><p>Blocked members cannot start conversations with you in HUSH.</p></div></div>
@@ -69,6 +69,7 @@
 </section>
 <section id="adminPage" class="page hidden"><div class="banner adminBanner"><div><small>HUSH CONTROL ROOM</small><h1>Keep the space safe.</h1><p>Review community photos and reports. Only designated admins can access this panel.</p></div><div class="symbol">⚙</div></div>
 <div class="adminTabs"><button class="adminTab active" data-admin-tab="pending">Pending photos</button><button class="adminTab" data-admin-tab="photos">Photos</button><button class="adminTab" data-admin-tab="reports">Reports</button><button class="adminTab" data-admin-tab="members">Members</button><button class="adminTab" data-admin-tab="safety">Safety</button></div>
+<div id="adminPulse" class="adminPulse"></div>
 <div id="adminContent" class="adminContent"><div class="empty">Loading admin tools…</div></div></section>
 </main></div>
 <div id="modal" class="modal hidden"><div class="modalBox"><button id="closeModal" class="close">×</button><div id="modalBody"></div></div></div>
