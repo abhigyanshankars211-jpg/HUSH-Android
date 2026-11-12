@@ -1,0 +1,14 @@
+{
+  "appId": "com.hush.social",
+  "appName": "HUSH",
+  "webDir": "www",
+  "plugins": {
+    "SplashScreen": {
+      "launchShowDuration": 1500
+    },
+    "StatusBar": {
+      "style": "DARK",
+      "backgroundColor": "#17182b"
+    }
+  }
+}
