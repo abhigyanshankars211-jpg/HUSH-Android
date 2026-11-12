@@ -35,6 +35,17 @@ async function deviceBlocked(){
  if(!id) return false;
  try{const {data,error}=await sb.rpc('device_blocked',{device_id:id}); if(error) return false; return data===true;}catch(e){return false}
 }
+async function refreshOnline(){
+ const el=$('onlineCount'), game=$('gameOnline');
+ try{
+  const {data,error}=await sb.rpc('online_count');
+  if(error) throw error;
+  const n=Number(data)||0;
+  const label=n===1?'1 online':n+' online';
+  if(el) el.textContent=label;
+  if(game) game.textContent='· '+n;
+ }catch(e){ if(el) el.textContent='Connected'; }
+}
 async function startPresence(){
  if(presenceStarted) return;
  presenceStarted=true;
@@ -46,7 +57,9 @@ async function startPresence(){
   }catch(e){}
  };
  beat();
+ refreshOnline();
  setInterval(beat,60000);
+ setInterval(refreshOnline,30000);
 }
 async function purgeVanish(){
  try{const s=await sb.rpc('vanish_enabled'); if(!s.error) vanishOn=s.data===true;}catch(e){}

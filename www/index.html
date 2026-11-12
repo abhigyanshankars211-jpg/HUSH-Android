@@ -63,7 +63,7 @@
 </nav>
 <div class="privacy-note"><b>✦ Stay private</b><p>Never post your phone number, address, passwords or identifying details.</p></div>
 <button id="signOut" class="signout">↪ Sign out</button></aside>
-<main class="main"><header class="topbar"><div><small id="sectionKicker">COMMUNITY SPACE</small><h2 id="sectionTitle">Pic Wall</h2></div><div class="status"><i></i> Connected</div></header>
+<main class="main"><header class="topbar"><div><small id="sectionKicker">COMMUNITY SPACE</small><h2 id="sectionTitle">Pic Wall</h2></div><div class="status"><i></i> <span id="onlineCount">Online</span></div></header>
 <section id="wallPage" class="page"><div class="banner wallBanner"><div><small>SHARE A MOMENT</small><h1>A wall without<br>the labels.</h1><p>Post a picture. Start a conversation. Stay anonymous.</p></div><div class="symbol">✳</div></div>
 <div class="sectionhead"><div><h3>Community wall</h3><p>Tap a photo to open it. Every photo is removed after 1 hour.</p></div><div class="inline"><button id="refreshWall" class="btn secondary" type="button">Refresh</button><button id="postBtn" class="btn primary">＋ Share a picture</button></div></div><div id="posts" class="cards"><div class="empty">Loading the wall…</div></div></section>
 <section id="chatsPage" class="page hidden"><div class="banner chatBanner"><div><small>PRIVATE CONVERSATIONS</small><h1>Your people,<br>your space.</h1><p>One-to-one conversations, without revealing your identity.</p></div><div class="symbol">✉</div></div>
@@ -76,7 +76,7 @@
 <form id="joinTic" class="inline"><input id="ticCode" maxlength="5" placeholder="Game code" autocomplete="off"><button class="btn secondary" type="submit">Join</button></form>
 <p id="ticCodeShow" class="ticCode"></p>
 <p id="ticStatus" class="hint">Start a game or join with a code.</p>
-<div class="gameLayout"><div id="ticBoard" class="ticBoard"></div><aside class="memberRail"><h3>In the app now</h3><div id="ticMembers"><div class="empty">Open this page to see members.</div></div></aside></div></section>
+<div class="gameLayout"><div id="ticBoard" class="ticBoard"></div><aside class="memberRail"><h3>In the app now <span id="gameOnline"></span></h3><div id="ticMembers"><div class="empty">Open this page to see members.</div></div></aside></div></section>
 <section id="profilePage" class="page hidden"><div class="banner profileBanner"><div><small>YOUR SPACE</small><h1>Your identity.<br>Your choices.</h1><p>Manage your anonymous profile and privacy.</p></div><div class="symbol">◎</div></div>
 <div class="profileBox"><div class="avatar big" id="profileAvatar">?</div><h3 id="profileUsername">Member</h3><p>Anonymous HUSH member</p><p class="account-id">Account ID: <code id="profileId">Loading…</code></p><button class="btn secondary" id="copyIdBtn" type="button">Copy account ID (for admin setup)</button></div>
 <div class="sectionhead"><div><h3>Block a member</h3><p>Blocked members cannot start conversations with you in HUSH.</p></div></div>
