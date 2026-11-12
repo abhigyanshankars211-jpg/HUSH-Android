@@ -28,22 +28,29 @@ jobs:
         with:
           packages: 'platform-tools platforms;android-35 platforms;android-36 build-tools;35.0.0 build-tools;36.0.0'
 
-      - name: Extract HUSH source
+      - name: Prepare HUSH source
         run: |
           set -euo pipefail
-          rm -rf app
-          mkdir app
-          unzip -q HUSH_Android_Capacitor_Source.zip -d app
-          if [ -f app/package.json ]; then
-            echo "APP_DIR=app" >> "$GITHUB_ENV"
-          else
-            pkg=$(find app -mindepth 2 -maxdepth 3 -name package.json -type f | head -n 1)
-            if [ -z "$pkg" ]; then
-              echo "package.json zip ke andar nahi mila" >&2
-              find app -maxdepth 3 -type d
-              exit 1
+          if [ -f package.json ]; then
+            if [ -f HUSH_Android_Capacitor_Source.zip ]; then
+              unzip -qo HUSH_Android_Capacitor_Source.zip "www/icons/*" -d .
             fi
-            echo "APP_DIR=$(dirname "$pkg")" >> "$GITHUB_ENV"
+            echo "APP_DIR=." >> "$GITHUB_ENV"
+          else
+            rm -rf app
+            mkdir app
+            unzip -q HUSH_Android_Capacitor_Source.zip -d app
+            if [ -f app/package.json ]; then
+              echo "APP_DIR=app" >> "$GITHUB_ENV"
+            else
+              pkg=$(find app -mindepth 2 -maxdepth 3 -name package.json -type f | head -n 1)
+              if [ -z "$pkg" ]; then
+                echo "package.json zip ke andar nahi mila" >&2
+                find app -maxdepth 3 -type d
+                exit 1
+              fi
+              echo "APP_DIR=$(dirname "$pkg")" >> "$GITHUB_ENV"
+            fi
           fi
 
       - name: Install dependencies
