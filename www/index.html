@@ -1,0 +1,76 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8"><meta name="theme-color" content="#17182b"><meta name="apple-mobile-web-app-capable" content="yes"><meta name="apple-mobile-web-app-status-bar-style" content="black-translucent"><link rel="manifest" href="manifest.webmanifest"><meta name="viewport" content="width=device-width,initial-scale=1">
+<title>HUSH — Anonymous Social</title>
+<link rel="stylesheet" href="style.css">
+<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+<script src="config.js"></script>
+<script defer src="app.js"></script>
+</head>
+<body>
+<div id="ageGate" class="login-wrap"><div class="login-card">
+<div class="logo">h</div><span class="tag">18+ ONLY</span><h1>Adults only.</h1>
+<p>HUSH photos aur private chats ke liye hai. Yeh space 18 saal se kam logon ke liye nahi hai.</p>
+<button id="ageYes" class="btn primary" type="button">I am 18 or older</button>
+<button id="ageNo" class="btn secondary" type="button">I am under 18</button>
+<small id="ageNoMsg" class="error hidden">Aap HUSH use nahi kar sakte.</small>
+</div></div>
+<div id="login" class="login-wrap hidden"><div class="login-card" id="loginCard">
+<div class="logo">h</div><span class="tag">ANONYMOUS SOCIAL</span><h1>Find your people.<br><i>Keep your privacy.</i></h1>
+<p>Join HUSH with an anonymous account. No public phone number or email profile.</p>
+<label>Choose a username</label><input id="username" maxlength="20" placeholder="e.g. MoonWalker27" autocomplete="off">
+<button id="loginBtn" class="btn primary">Enter HUSH <span>→</span></button>
+<small>Use 3–20 letters, numbers or underscores. Avoid personal information.</small>
+<div id="loginError" class="error"></div>
+<hr style="border:0;border-top:1px solid var(--line);margin:24px 0">
+<h3 style="margin:0 0 8px">Admin login</h3>
+<p style="margin:0 0 14px;font-size:12px">Admin ke liye permanent email/password account. Email public profile par nahi dikhega.</p>
+<input id="adminEmail" type="email" placeholder="Admin email" autocomplete="email">
+<input id="adminPassword" type="password" placeholder="Password (minimum 8 characters)" autocomplete="current-password" style="margin-top:9px">
+<button id="adminLoginBtn" class="btn secondary" type="button">Admin sign in</button>
+<button id="adminCreateBtn" class="btn secondary" type="button">Create permanent admin account</button>
+<small>Account create karne ke baad Supabase Authentication → Users se UID copy karke admin_users mein activate karein. Email verification enabled ho to inbox verify karein.</small>
+</div>
+<div class="login-card hidden" id="appealBox">
+<div class="logo">h</div><span class="tag">ACCOUNT RESTRICTED</span><h1>Appeal once.</h1>
+<p>Aapka account band hai. Ek baar reason likh sakte ho. Admin accept ya reject karega.</p>
+<textarea id="appealText" maxlength="500" placeholder="Kya hua, seedhe shabdon mein likho"></textarea>
+<button id="appealBtn" class="btn primary" type="button">Send appeal</button>
+<p id="appealStatus" class="error"></p>
+<button id="appealSignOut" class="btn secondary" type="button">Sign out</button>
+</div></div>
+<div id="app" class="app hidden">
+<aside class="sidebar"><div class="brand"><div class="logo mini">h</div><div><b>hush</b><small>anonymous social</small></div></div>
+<div class="myprofile"><div class="avatar" id="avatar">?</div><div><b id="myUsername">Member</b><small>Anonymous member</small></div></div>
+<nav>
+<button class="nav active" data-page="wall"><span>▦</span> Pic Wall</button>
+<button class="nav" data-page="chats"><span>◌</span> Chats</button>
+<button class="nav" data-page="groups"><span>♧</span> Groups</button>
+<button class="nav" data-page="profile"><span>◎</span> Profile & safety</button>
+<button class="nav hidden" id="adminNav" data-page="admin"><span>⚙</span> Admin panel</button>
+</nav>
+<div class="privacy-note"><b>✦ Stay private</b><p>Never post your phone number, address, passwords or identifying details.</p></div>
+<button id="signOut" class="signout">↪ Sign out</button></aside>
+<main class="main"><header class="topbar"><div><small id="sectionKicker">COMMUNITY SPACE</small><h2 id="sectionTitle">Pic Wall</h2></div><div class="status"><i></i> Connected</div></header>
+<section id="wallPage" class="page"><div class="banner wallBanner"><div><small>SHARE A MOMENT</small><h1>A wall without<br>the labels.</h1><p>Post a picture. Start a conversation. Stay anonymous.</p></div><div class="symbol">✳</div></div>
+<div class="sectionhead"><div><h3>Community wall</h3><p>Posts appear after moderation approval.</p></div><button id="postBtn" class="btn primary">＋ Share a picture</button></div><div id="posts" class="cards"><div class="empty">Loading the wall…</div></div></section>
+<section id="chatsPage" class="page hidden"><div class="banner chatBanner"><div><small>PRIVATE CONVERSATIONS</small><h1>Your people,<br>your space.</h1><p>One-to-one conversations, without revealing your identity.</p></div><div class="symbol">✉</div></div>
+<div class="sectionhead"><div><h3>Your conversations</h3><p>Find a member by their HUSH username.</p></div><button id="newChat" class="btn primary">＋ New chat</button></div>
+<div class="chatLayout"><div id="chatList" class="chatList"><div class="empty">No conversations yet.</div></div><div id="chatPanel" class="chatPanel"><div class="empty">Choose a conversation.</div></div></div></section>
+<section id="groupsPage" class="page hidden"><div class="banner groupBanner"><div><small>FIND YOUR COMMUNITY</small><h1>Better together.</h1><p>Create a space around an interest.</p></div><div class="symbol">✺</div></div>
+<div class="sectionhead"><div><h3>Explore groups</h3><p>Join a public group or create your own.</p></div><button id="createGroup" class="btn primary">＋ Create group</button></div><div id="groups" class="groupGrid"><div class="empty">Loading groups…</div></div></section>
+<section id="profilePage" class="page hidden"><div class="banner profileBanner"><div><small>YOUR SPACE</small><h1>Your identity.<br>Your choices.</h1><p>Manage your anonymous profile and privacy.</p></div><div class="symbol">◎</div></div>
+<div class="profileBox"><div class="avatar big" id="profileAvatar">?</div><h3 id="profileUsername">Member</h3><p>Anonymous HUSH member</p><p class="account-id">Account ID: <code id="profileId">Loading…</code></p><button class="btn secondary" id="copyIdBtn" type="button">Copy account ID (for admin setup)</button></div>
+<div class="sectionhead"><div><h3>Block a member</h3><p>Blocked members cannot start conversations with you in HUSH.</p></div></div>
+<div class="safetyBox"><div class="inline"><input id="blockUsername" placeholder="Username to block"><button id="blockBtn" class="btn secondary">Block</button></div><div id="blockedList" class="blockedList">Loading…</div></div>
+<div class="safetyBox"><h3>Privacy & moderation</h3><p>New Pic Wall posts are pending until an administrator approves them. Phone number, email aur links block ho jaate hain. Naye account pe pehle 24 ghante mein sirf 1 photo. Screenshot ho sakta hai — personal info mat likho.</p></div>
+<div class="safetyBox"><h3>Delete account</h3><p>Account, aapke posts aur aapke messages delete ho jayenge. Wapas nahi aayega.</p><button class="btn danger" id="deleteAccountBtn" type="button">Delete my account</button></div>
+</section>
+<section id="adminPage" class="page hidden"><div class="banner adminBanner"><div><small>HUSH CONTROL ROOM</small><h1>Keep the space safe.</h1><p>Review community photos and reports. Only designated admins can access this panel.</p></div><div class="symbol">⚙</div></div>
+<div class="adminTabs"><button class="adminTab active" data-admin-tab="pending">Pending photos</button><button class="adminTab" data-admin-tab="reports">Reports</button><button class="adminTab" data-admin-tab="members">Members</button><button class="adminTab" data-admin-tab="safety">Safety</button></div>
+<div id="adminContent" class="adminContent"><div class="empty">Loading admin tools…</div></div></section>
+</main></div>
+<div id="modal" class="modal hidden"><div class="modalBox"><button id="closeModal" class="close">×</button><div id="modalBody"></div></div></div>
+<div id="toast" class="toast"></div>
+<script>if("serviceWorker" in navigator){window.addEventListener("load",()=>navigator.serviceWorker.register("./sw.js").catch(()=>{}));}</script></body></html>
