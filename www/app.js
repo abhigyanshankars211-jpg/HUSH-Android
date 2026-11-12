@@ -37,14 +37,22 @@ async function deviceBlocked(){
 }
 async function refreshOnline(){
  const el=$('onlineCount'), game=$('gameOnline');
+ let n=null;
  try{
-  const {data,error}=await sb.rpc('online_count');
-  if(error) throw error;
-  const n=Number(data)||0;
-  const label=n===1?'1 online':n+' online';
-  if(el) el.textContent=label;
-  if(game) game.textContent='· '+n;
- }catch(e){ if(el) el.textContent='Connected'; }
+  const pulse=await sb.rpc('pulse_online');
+  if(!pulse.error && pulse.data!=null) n=Number(pulse.data);
+  else {
+   const c=await sb.rpc('online_count');
+   if(!c.error && c.data!=null) n=Number(c.data);
+  }
+ }catch(e){}
+ if(n==null){
+  if(el) el.textContent='Active now';
+  return;
+ }
+ const label=n===1?'1 active now':n+' active now';
+ if(el) el.textContent=label;
+ if(game) game.textContent='· '+n;
 }
 async function startPresence(){
  if(presenceStarted) return;
@@ -232,6 +240,55 @@ async function login(){
  }catch(e){showError(e.message||'Could not sign in. Check Anonymous Sign-ins and try again.')}
  finally{$('loginBtn').disabled=false}
 }
+async function ensureProfile(user){
+ const {data:p,error}=await sb.from('profiles').select('username,created_at').eq('id',user.id).maybeSingle();
+ if(error) throw error;
+ if(p?.username){username=p.username;profileCreatedAt=p.created_at||null;return}
+ const u=$('username').value.trim().replace(/\s+/g,'_');
+ if(!/^[A-Za-z0-9_]{3,20}$/.test(u)) throw new Error('Choose a username first. Use 3–20 letters, numbers or _.');
+ const bad=safetyBlock(u); if(bad) throw new Error(bad+' Choose a different username.');
+ const up=await sb.from('profiles').upsert({id:user.id,username:u});
+ if(up.error) throw up.error;
+ username=u;
+ const again=await sb.from('profiles').select('created_at').eq('id',user.id).maybeSingle();
+ profileCreatedAt=again.data?.created_at||null;
+}
+async function afterEmailSession(session){
+ me=session.user;
+ if(await deviceBlocked()) throw new Error('This device is banned. You cannot sign in again.');
+ const banned=await sb.rpc('is_hush_banned');
+ if(banned.data===true){await showAppeal();return}
+ await ensureProfile(me);
+ enterApp();
+}
+async function emailSignUp(){
+ const email=$('memberEmail').value.trim(), password=$('memberPassword').value;
+ if(!email||password.length<8){showError('Enter an email and a password of at least 8 characters.');return}
+ showError('');
+ try{
+  if(await deviceBlocked()) throw new Error('This device is banned. You cannot sign in again.');
+  const open=await signupsEnabled();
+  if(!open) throw new Error('New members are paused. An admin has turned joining off.');
+  const {data,error}=await sb.auth.signUp({email,password});
+  if(error) throw error;
+  if(!data.session){showError('Account created. Open the link in your email, then use Sign in with email.');return}
+  await afterEmailSession(data.session);
+ }catch(e){showError(e.message||'Could not create the email account.')}
+}
+async function emailSignIn(){
+ const email=$('memberEmail').value.trim(), password=$('memberPassword').value;
+ if(!email||password.length<8){showError('Enter the same email and password.');return}
+ showError('');
+ try{
+  if(await deviceBlocked()) throw new Error('This device is banned. You cannot sign in again.');
+  const {data,error}=await sb.auth.signInWithPassword({email,password});
+  if(error) throw error;
+  if(!data.session) throw new Error('Confirm the email link first, then sign in.');
+  await afterEmailSession(data.session);
+ }catch(e){showError(e.message||'Email sign-in failed.')}
+}
+$('emailSignUpBtn').onclick=emailSignUp;
+$('emailSignInBtn').onclick=emailSignIn;
 async function enterApp(){$('login').classList.add('hidden');$('app').classList.remove('hidden');$('myUsername').textContent=username;$('avatar').textContent=initials(username);$('profileUsername').textContent=username;$('profileAvatar').textContent=initials(username);$('profileId').textContent=me.id;if(!profileCreatedAt){const {data:p}=await sb.from('profiles').select('created_at').eq('id',me.id).maybeSingle();profileCreatedAt=p?.created_at||null}await loadSafetyWords();await startPresence();await purgeVanish();const a=await sb.rpc('is_hush_admin');isAdminUser=a.data===true;if(isAdminUser)$('adminNav').classList.remove('hidden');try{await sb.rpc('sweep_expired_posts')}catch(e){}try{const lock=await sb.rpc('posting_locked');if(!lock.error&&lock.data===true)notify('Posting is paused after 3 member reports. An admin must review your account.')}catch(e){}page('wall');maybeGuide()}
 $('signOut').onclick=async()=>{if(!confirm('Sign out? This anonymous account may not be recoverable in this browser.'))return;await sb.auth.signOut();location.reload()};
 async function profiles(ids){if(!ids.length)return{};const {data,error}=await sb.from('profiles').select('id,username').in('id',[...new Set(ids)]);if(error)throw error;return Object.fromEntries((data||[]).map(x=>[x.id,x.username]))}

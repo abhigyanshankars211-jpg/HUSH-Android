@@ -19,7 +19,7 @@
 </div></div>
 <div id="login" class="login-wrap hidden"><div class="login-card" id="loginCard">
 <div class="logo">h</div><span class="tag">ANONYMOUS SOCIAL</span><h1>Find your people.<br><i>Keep your privacy.</i></h1>
-<p>Join HUSH with an anonymous account. No public phone number or email profile.</p>
+<p>Use a username, or create an email account. Your email is never shown to other members.</p>
 <ul class="rules">
 <li>No abuse.</li>
 <li>Avoid porn.</li>
@@ -30,8 +30,15 @@
 <li>Three member reports pause posting. Only an admin can ban.</li>
 </ul>
 <label>Choose a username</label><input id="username" maxlength="20" placeholder="e.g. MoonWalker27" autocomplete="off">
-<button id="loginBtn" class="btn primary">Enter HUSH <span>→</span></button>
+<button id="loginBtn" class="btn primary">Continue anonymously <span>→</span></button>
 <small>Use 3–20 letters, numbers or underscores. Avoid personal information.</small>
+<hr class="memberSplit">
+<h3>Email account</h3>
+<p class="hint">Optional. Sign up once, then sign in with the same email. The email stays private.</p>
+<input id="memberEmail" type="email" placeholder="Email" autocomplete="email">
+<input id="memberPassword" type="password" placeholder="Password (minimum 8 characters)" autocomplete="current-password" style="margin-top:9px">
+<button id="emailSignUpBtn" class="btn secondary" type="button">Create email account</button>
+<button id="emailSignInBtn" class="btn secondary" type="button">Sign in with email</button>
 <div id="loginError" class="error"></div>
 <hr id="adminGate" style="border:0;border-top:1px solid var(--line);margin:24px 0">
 <h3 style="margin:0 0 8px">Admin login</h3>
@@ -63,7 +70,7 @@
 </nav>
 <div class="privacy-note"><b>✦ Stay private</b><p>Never post your phone number, address, passwords or identifying details.</p></div>
 <button id="signOut" class="signout">↪ Sign out</button></aside>
-<main class="main"><header class="topbar"><div><small id="sectionKicker">COMMUNITY SPACE</small><h2 id="sectionTitle">Pic Wall</h2></div><div class="status"><i></i> <span id="onlineCount">Online</span></div></header>
+<main class="main"><header class="topbar"><div><small id="sectionKicker">COMMUNITY SPACE</small><h2 id="sectionTitle">Pic Wall</h2></div><div class="status"><i></i> <b id="onlineCount">Active now</b></div></header>
 <section id="wallPage" class="page"><div class="banner wallBanner"><div><small>SHARE A MOMENT</small><h1>A wall without<br>the labels.</h1><p>Post a picture. Start a conversation. Stay anonymous.</p></div><div class="symbol">✳</div></div>
 <div class="sectionhead"><div><h3>Community wall</h3><p>Tap a photo to open it. Every photo is removed after 1 hour.</p></div><div class="inline"><button id="refreshWall" class="btn secondary" type="button">Refresh</button><button id="postBtn" class="btn primary">＋ Share a picture</button></div></div><div id="posts" class="cards"><div class="empty">Loading the wall…</div></div></section>
 <section id="chatsPage" class="page hidden"><div class="banner chatBanner"><div><small>PRIVATE CONVERSATIONS</small><h1>Your people,<br>your space.</h1><p>One-to-one conversations, without revealing your identity.</p></div><div class="symbol">✉</div></div>

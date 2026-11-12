@@ -73,3 +73,6 @@ body{background:#0e1118;color:var(--ink)}
 .ticBoard button{background:#10141c;color:#f4efe6}
 .meta{gap:8px}
 @media(max-width:800px){.gameLayout{grid-template-columns:1fr}}
+#onlineCount{font-weight:800}
+.memberSplit{border:0;border-top:1px solid var(--line);margin:22px 0}
+.hint{color:var(--muted);font-size:12px;line-height:1.5}
