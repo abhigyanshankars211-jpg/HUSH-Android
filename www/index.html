@@ -27,7 +27,7 @@
 <li>No spam.</li>
 <li>A ban blocks this device, not only the account.</li>
 <li>No phone numbers, addresses, emails, or links.</li>
-<li>Wall photos are removed after 1 hour.</li>
+<li>If an admin turns on 24-hour delete, wall photos, chats, the room, and comments are removed after 24 hours.</li>
 <li>Three member reports pause posting. Only an admin can ban.</li>
 </ul>
 <label>Choose a username</label><input id="username" maxlength="20" placeholder="e.g. MoonWalker27" autocomplete="off">
@@ -74,7 +74,7 @@
 <button id="signOut" class="signout">↪ Sign out</button></aside>
 <main class="main"><header class="topbar"><div><small id="sectionKicker">COMMUNITY SPACE</small><h2 id="sectionTitle">Pic Wall</h2></div><div class="status"><i></i> <b id="onlineCount">Active now</b></div></header>
 <section id="wallPage" class="page"><div class="banner wallBanner"><div><small>SHARE A MOMENT</small><h1>A wall without<br>the labels.</h1><p>Post a picture. Start a conversation. Stay anonymous.</p></div><div class="symbol">✳</div></div>
-<div class="sectionhead"><div><h3>Community wall</h3><p>Tap a photo to open it. Every photo is removed after 1 hour.</p></div><div class="inline"><button id="refreshWall" class="btn secondary" type="button">Refresh</button><button id="postBtn" class="btn primary">＋ Share a picture</button></div></div><div id="posts" class="cards"><div class="empty">Loading the wall…</div></div></section>
+<div class="sectionhead"><div><h3>Community wall</h3><p>Tap a photo to open it. Photos stay unless an admin turns on 24-hour delete.</p></div><div class="inline"><button id="refreshWall" class="btn secondary" type="button">Refresh</button><button id="postBtn" class="btn primary">＋ Share a picture</button></div></div><div id="posts" class="cards"><div class="empty">Loading the wall…</div></div></section>
 <section id="chatsPage" class="page hidden"><div class="banner chatBanner"><div><small>PRIVATE CONVERSATIONS</small><h1>Your people,<br>your space.</h1><p>One-to-one conversations, without revealing your identity.</p></div><div class="symbol">✉</div></div>
 <div class="sectionhead"><div><h3>Your conversations</h3><p>Start a chat with a username. Do not share a phone number.</p></div><button id="newChat" class="btn primary">＋ New chat</button></div>
 <div class="chatLayout"><div id="chatList" class="chatList"><div class="empty">No chats yet.</div></div><div id="chatPanel" class="chatPanel"><div class="empty">Choose a conversation.</div></div></div></section>
@@ -95,7 +95,7 @@
 <div class="profileBox"><div class="avatar big" id="profileAvatar">?</div><h3 id="profileUsername">Member</h3><p>Anonymous HUSH member</p><p class="account-id">Account ID: <code id="profileId">Loading…</code></p><button class="btn secondary" id="copyIdBtn" type="button">Copy account ID (for admin setup)</button></div>
 <div class="sectionhead"><div><h3>Block a member</h3><p>Blocked members cannot start conversations with you in HUSH.</p></div></div>
 <div class="safetyBox"><div class="inline"><input id="blockUsername" placeholder="Username to block"><button id="blockBtn" class="btn secondary">Block</button></div><div id="blockedList" class="blockedList">Loading…</div></div>
-<div class="safetyBox"><h3>Privacy & moderation</h3><p>New Pic Wall posts stay hidden until an administrator approves them. Every photo is removed after 1 hour. Members can mark a photo for deletion. Only an admin can delete it. Phone numbers, emails, and links are blocked. A new account can post only 1 photo in the first 24 hours. Screenshots are possible, so do not share personal details.</p></div>
+<div class="safetyBox"><h3>Privacy & moderation</h3><p>New Pic Wall posts stay hidden until an administrator approves them. Photos, chats, the room, and comments stay unless an admin turns on 24-hour delete. Members can mark a photo for deletion. Only an admin can delete it. Phone numbers, emails, and links are blocked. A new account can post only 1 photo in the first 24 hours. Screenshots are possible, so do not share personal details.</p></div>
 <div class="safetyBox"><h3>Delete account</h3><p>Your account, posts, and messages will be deleted. This cannot be undone.</p><button class="btn danger" id="deleteAccountBtn" type="button">Delete my account</button></div>
 </section>
 <section id="adminPage" class="page hidden"><div class="banner adminBanner"><div><small>HUSH CONTROL ROOM</small><h1>Keep the space safe.</h1><p>Review community photos and reports. Only designated admins can access this panel.</p></div><div class="symbol">⚙</div></div>
