@@ -74,6 +74,9 @@ body{background:#0e1118;color:var(--ink)}
 .meta{gap:8px}
 @media(max-width:800px){.gameLayout{grid-template-columns:1fr}}
 .roomLog{height:52vh;background:#171b24;border:1px solid var(--line);border-radius:16px;margin-bottom:0}
+.login-card{padding:0 0 28px;overflow:hidden}
+.loginPhoto{display:block;width:100%;height:340px;object-fit:cover;object-position:center 12%}
+.login-card>*:not(.loginPhoto){margin-left:28px;margin-right:28px}
 @media(max-width:650px){.nav[data-page=room]:after{content:'Room'}}
 #onlineCount{font-weight:800}
 .memberSplit{border:0;border-top:1px solid var(--line);margin:22px 0}
