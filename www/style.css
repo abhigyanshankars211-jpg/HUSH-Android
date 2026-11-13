@@ -81,3 +81,7 @@ body{background:#0e1118;color:var(--ink)}
 #onlineCount{font-weight:800}
 .memberSplit{border:0;border-top:1px solid var(--line);margin:22px 0}
 .hint{color:var(--muted);font-size:12px;line-height:1.5}
+.app{background:linear-gradient(180deg,rgba(8,10,16,.8),rgba(8,10,16,.88)),url('app-bg.jpg') center 16%/cover no-repeat fixed}
+.main{background:transparent}
+.sidebar{background:rgba(18,21,28,.94)}
+@media(max-width:650px){.app{background-attachment:scroll}}
