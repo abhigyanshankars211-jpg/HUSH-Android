@@ -29,7 +29,7 @@ function imageFileError(file){
  if(file.size>2*1024*1024) return 'Image must be under 2 MB.';
  return '';
 }
-let vanishOn=false, delete24=false, presenceStarted=false;
+let vanishOn=false, delete24=false, presenceStarted=false, queenRefreshStarted=false;
 async function deviceBlocked(){
  const id=deviceId();
  if(!id) return false;
@@ -290,7 +290,7 @@ async function emailSignIn(){
 }
 $('emailSignUpBtn').onclick=emailSignUp;
 $('emailSignInBtn').onclick=emailSignIn;
-async function enterApp(){$('login').classList.add('hidden');$('app').classList.remove('hidden');$('myUsername').textContent=username;$('avatar').textContent=initials(username);$('profileUsername').textContent=username;$('profileAvatar').textContent=initials(username);$('profileId').textContent=me.id;if(!profileCreatedAt){const {data:p}=await sb.from('profiles').select('created_at').eq('id',me.id).maybeSingle();profileCreatedAt=p?.created_at||null}await loadSafetyWords();await startPresence();await purgeVanish();const a=await sb.rpc('is_hush_admin');isAdminUser=a.data===true;if(isAdminUser)$('adminNav').classList.remove('hidden');if(delete24){try{await sb.rpc('sweep_expired_posts')}catch(e){} try{await sb.rpc('sweep_app_24h')}catch(e){}}try{const lock=await sb.rpc('posting_locked');if(!lock.error&&lock.data===true)notify('Posting is paused after 3 member reports. An admin must review your account.')}catch(e){}page('wall');maybeGuide()}
+async function enterApp(){$('login').classList.add('hidden');$('app').classList.remove('hidden');$('myUsername').textContent=username;$('avatar').textContent=initials(username);$('profileUsername').textContent=username;$('profileAvatar').textContent=initials(username);$('profileId').textContent=me.id;if(!profileCreatedAt){const {data:p}=await sb.from('profiles').select('created_at').eq('id',me.id).maybeSingle();profileCreatedAt=p?.created_at||null}await loadSafetyWords();await startPresence();await purgeVanish();const a=await sb.rpc('is_hush_admin');isAdminUser=a.data===true;if(isAdminUser)$('adminNav').classList.remove('hidden');if(delete24){try{await sb.rpc('sweep_expired_posts')}catch(e){} try{await sb.rpc('sweep_app_24h')}catch(e){}}try{const lock=await sb.rpc('posting_locked');if(!lock.error&&lock.data===true)notify('Posting is paused after 3 member reports. An admin must review your account.')}catch(e){}page('wall');if(!queenRefreshStarted){queenRefreshStarted=true;setInterval(()=>{if(!$('wallPage').classList.contains('hidden'))loadQueenWall()},15000)}maybeGuide()}
 $('signOut').onclick=async()=>{if(!confirm('Sign out? This anonymous account may not be recoverable in this browser.'))return;await sb.auth.signOut();location.reload()};
 async function profiles(ids){if(!ids.length)return{};const {data,error}=await sb.from('profiles').select('id,username').in('id',[...new Set(ids)]);if(error)throw error;return Object.fromEntries((data||[]).map(x=>[x.id,x.username]))}
 async function loadQueenWall(){
