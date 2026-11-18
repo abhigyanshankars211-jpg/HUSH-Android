@@ -85,3 +85,18 @@ body{background:#0e1118;color:var(--ink)}
 .main{background:transparent}
 .sidebar{background:rgba(18,21,28,.94)}
 @media(max-width:650px){.app{background-attachment:scroll}}
+
+/* Queen of Whore featured wall — isolated additive styles */
+.queenWallBlock{margin:22px 0 26px;padding:18px;border:1px solid #6d5134;border-radius:18px;background:linear-gradient(135deg,rgba(45,31,22,.96),rgba(25,28,37,.98));}
+.queenWallHeading{display:flex;align-items:center;justify-content:space-between;gap:12px;margin-bottom:14px}
+.queenWallHeading small{color:#e2a15c;font-size:10px;font-weight:800;letter-spacing:1.5px}
+.queenWallHeading h3{margin:4px 0;color:#f5d5a6;font-size:20px}
+.queenWallHeading p,.queenEmpty{margin:0;color:#c8bdad;font-size:12px;line-height:1.5}
+.queenCrown{font-size:34px;color:#e2a15c}
+.queenCard{display:grid;grid-template-columns:minmax(0,1.2fr) minmax(130px,.8fr);gap:14px;align-items:center}
+.queenCard img{width:100%;max-height:360px;object-fit:contain;border-radius:13px;background:#10141c;cursor:pointer}
+.queenDetails{color:#f4efe6;font-size:13px}
+.queenDetails p{color:#c8bdad;line-height:1.5}
+.queenDetails span{color:#e2a15c;font-weight:800}
+.queenEmpty{padding:18px 10px;text-align:center;border:1px dashed #6d5134;border-radius:12px}
+@media(max-width:650px){.queenWallBlock{padding:13px}.queenCard{grid-template-columns:1fr}.queenCard img{max-height:420px}.queenWallHeading h3{font-size:18px}}
