@@ -293,6 +293,16 @@ $('emailSignInBtn').onclick=emailSignIn;
 async function enterApp(){$('login').classList.add('hidden');$('app').classList.remove('hidden');$('myUsername').textContent=username;$('avatar').textContent=initials(username);$('profileUsername').textContent=username;$('profileAvatar').textContent=initials(username);$('profileId').textContent=me.id;if(!profileCreatedAt){const {data:p}=await sb.from('profiles').select('created_at').eq('id',me.id).maybeSingle();profileCreatedAt=p?.created_at||null}await loadSafetyWords();await startPresence();await purgeVanish();const a=await sb.rpc('is_hush_admin');isAdminUser=a.data===true;if(isAdminUser)$('adminNav').classList.remove('hidden');if(delete24){try{await sb.rpc('sweep_expired_posts')}catch(e){} try{await sb.rpc('sweep_app_24h')}catch(e){}}try{const lock=await sb.rpc('posting_locked');if(!lock.error&&lock.data===true)notify('Posting is paused after 3 member reports. An admin must review your account.')}catch(e){}page('wall');maybeGuide()}
 $('signOut').onclick=async()=>{if(!confirm('Sign out? This anonymous account may not be recoverable in this browser.'))return;await sb.auth.signOut();location.reload()};
 async function profiles(ids){if(!ids.length)return{};const {data,error}=await sb.from('profiles').select('id,username').in('id',[...new Set(ids)]);if(error)throw error;return Object.fromEntries((data||[]).map(x=>[x.id,x.username]))}
+async function loadQueenWall(){
+ const host=$('queenWallFeatured'); if(!host)return;
+ try{
+  const {data,error}=await sb.rpc('get_queen_wall_featured');
+  if(error)throw error;
+  if(!data){host.innerHTML='<div class="queenEmpty">Abhi tak kisi photo ko 5 likes nahi mile.</div>';return}
+  const url=sb.storage.from('pic-wall').getPublicUrl(data.image_path).data.publicUrl;
+  host.innerHTML=`<article class="queenCard"><img src="${esc(url)}" alt="Queen of Whore featured photo" onclick="openPhoto('${data.post_id}')"><div class="queenDetails"><b>@${esc(data.username||'HUSH member')}</b><p>${esc(data.caption||'')}</p><span>♥ ${Number(data.like_count)||5} likes</span></div></article>`;
+ }catch(e){host.innerHTML='<div class="queenEmpty">Featured wall setup pending.</div>'}
+}
 async function loadPosts(){
  const el=$('posts');el.innerHTML='<div class="empty">Loading posts…</div>';
  try{
@@ -301,6 +311,7 @@ async function loadPosts(){
   const {data:rawPosts,error}=await sb.from('posts').select('*').eq('approved',true).order('created_at',{ascending:false}).limit(50);if(error)throw error;
   const posts=delete24?(rawPosts||[]).filter(p=>new Date(p.created_at).getTime()>Date.now()-24*60*60*1000):(rawPosts||[]);
   wallCache=Object.fromEntries(posts.map(p=>[p.id,p]));
+  await loadQueenWall();
   if(!posts.length){el.innerHTML='<div class="empty">No photos right now. Send one for admin review. Every photo is removed after 24 hours when that delete is on.</div>';return}
   const names=await profiles(posts.map(p=>p.user_id));
   const ids=posts.map(p=>p.id);
