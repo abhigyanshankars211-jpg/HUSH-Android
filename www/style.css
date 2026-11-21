@@ -81,6 +81,19 @@ body{background:#0e1118;color:var(--ink)}
 #onlineCount{font-weight:800}
 .memberSplit{border:0;border-top:1px solid var(--line);margin:22px 0}
 .hint{color:var(--muted);font-size:12px;line-height:1.5}
+.banner{display:none}
+.sectionhead{margin-top:4px}
+.sectionhead p{max-width:420px}
+.cards{gap:12px}
+.post,.chatLayout,.groupCard,.safetyBox,.profileBox,.adminContent{background:rgba(18,21,28,.94)}
+.loginPhoto{height:210px}
+.rules{margin-bottom:12px}
+@media(max-width:650px){
+ .sidebar{height:62px}
+ nav{overflow-x:auto;justify-content:flex-start;gap:2px}
+ .nav{flex:0 0 62px}
+ .main{padding-top:12px}
+}
 .app{background:linear-gradient(180deg,rgba(8,10,16,.8),rgba(8,10,16,.88)),url('app-bg.jpg') center 16%/cover no-repeat fixed}
 .main{background:transparent}
 .sidebar{background:rgba(18,21,28,.94)}

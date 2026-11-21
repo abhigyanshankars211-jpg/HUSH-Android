@@ -301,7 +301,7 @@ async function loadPosts(){
   const {data:rawPosts,error}=await sb.from('posts').select('*').eq('approved',true).order('created_at',{ascending:false}).limit(50);if(error)throw error;
   const posts=delete24?(rawPosts||[]).filter(p=>new Date(p.created_at).getTime()>Date.now()-24*60*60*1000):(rawPosts||[]);
   wallCache=Object.fromEntries(posts.map(p=>[p.id,p]));
-  if(!posts.length){el.innerHTML='<div class="empty">No photos right now. Send one for admin review. Every photo is removed after 24 hours when that delete is on.</div>';return}
+  if(!posts.length){el.innerHTML='<div class="empty">No photos yet. Share one. It shows up right away.</div>';return}
   const names=await profiles(posts.map(p=>p.user_id));
   const ids=posts.map(p=>p.id);
   const {data:comments}=await sb.from('comments').select('*').in('post_id',ids).order('created_at');
@@ -352,11 +352,11 @@ window.adminDeleteGroup=async id=>{
   loadGroups();
  }catch(e){notify(e.message||'Could not delete the group. The cleanup SQL may still need to be run once.')}
 };
-$('postBtn').onclick=()=>modal(`<h3>Share a picture</h3><form id="uploadForm"><div class="field"><label>JPG, PNG, or WebP. Max 2 MB.</label><input id="photo" type="file" accept="image/jpeg,image/png,image/webp" required><img id="photoPreview" class="previewShot hidden" alt="Preview"></div><div class="field"><label>Caption</label><textarea id="caption" maxlength="240" placeholder="Add a few words…"></textarea></div><p class="hint">Check the preview first. An admin will approve it. The photo is removed after 24 hours when that delete is on.</p><button class="btn primary">Submit for review</button></form>`);
+$('postBtn').onclick=()=>modal(`<h3>Share a picture</h3><form id="uploadForm"><div class="field"><label>JPG, PNG, or WebP. Max 2 MB.</label><input id="photo" type="file" accept="image/jpeg,image/png,image/webp" required><img id="photoPreview" class="previewShot hidden" alt="Preview"></div><div class="field"><label>Caption</label><textarea id="caption" maxlength="240" placeholder="Add a few words…"></textarea></div><p class="hint">It goes on the wall right away. Max 2 MB. If 24-hour delete is on, it is removed after 24 hours.</p><button class="btn primary">Post</button></form>`);
 $('refreshWall').onclick=()=>loadPosts();
 function maybeGuide(){
  try{if(localStorage.getItem('hush_guide_ok')==='yes')return}catch(e){return}
- modal(`<h3>Quick guide</h3><p>1. Send a photo. An admin approves it. It is removed after 24 hours when that delete is on.</p><p>2. Do not post a phone number, email, or link.</p><p>3. If a photo should go, tap Mark for delete. Only an admin can delete it.</p><button class="btn primary" id="guideOk" type="button">Got it</button>`);
+ modal(`<h3>Quick guide</h3><p>1. Send a photo. It appears on the wall right away.</p><p>2. Do not post a phone number, email, or link.</p><p>3. If a photo should go, tap Mark for delete. Only an admin can delete it.</p><button class="btn primary" id="guideOk" type="button">Got it</button>`);
  const ok=$('guideOk'); if(ok) ok.onclick=()=>{try{localStorage.setItem('hush_guide_ok','yes')}catch(e){} closeModal()};
 }
 $('modalBody').addEventListener('change',e=>{
@@ -369,7 +369,7 @@ $('modalBody').addEventListener('change',e=>{
  img.classList.remove('hidden');
 });
 $('modalBody').addEventListener('submit',async e=>{
- if(e.target.id==='uploadForm'){e.preventDefault();const f=$('photo').files[0];if(!f)return;if(f){const badPhoto=imageFileError(f);if(badPhoto){notify(badPhoto);return}}const cap=$('caption').value||'';const badCap=safetyBlock(cap);if(badCap){notify(badCap);return}try{await assertCanPost();const ext=f.name.split('.').pop().toLowerCase();const path=`${me.id}/${crypto.randomUUID()}.${ext}`;let r=await sb.storage.from('pic-wall').upload(path,f,{contentType:f.type,upsert:false});if(r.error)throw r.error;let p=await sb.from('posts').insert({user_id:me.id,image_path:path,caption:cap,approved:false});if(p.error)throw p.error;closeModal();notify('Photo submitted for admin review.');}catch(err){notify(err.message)}}
+ if(e.target.id==='uploadForm'){e.preventDefault();const f=$('photo').files[0];if(!f)return;if(f){const badPhoto=imageFileError(f);if(badPhoto){notify(badPhoto);return}}const cap=$('caption').value||'';const badCap=safetyBlock(cap);if(badCap){notify(badCap);return}try{await assertCanPost();const ext=f.name.split('.').pop().toLowerCase();const path=`${me.id}/${crypto.randomUUID()}.${ext}`;let r=await sb.storage.from('pic-wall').upload(path,f,{contentType:f.type,upsert:false});if(r.error)throw r.error;let posted=await sb.rpc('publish_wall_photo',{photo_path:path, photo_caption:cap});if(posted.error){posted=await sb.from('posts').insert({user_id:me.id,image_path:path,caption:cap,approved:true});}if(posted.error)throw posted.error;closeModal();notify('Photo posted.');loadPosts();}catch(err){notify(err.message)}}
  if(e.target.id==='dmForm'){e.preventDefault();await startDM($('dmUsername').value)}
  if(e.target.id==='groupForm'){e.preventDefault();await createGroup($('gName').value,$('gDesc').value,$('gPrivate').checked)}
 });
